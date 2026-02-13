@@ -1,0 +1,468 @@
+const path = require('path');
+const fs = require('fs');
+
+// Check if better-sqlite3 is available
+let Database;
+try {
+    Database = require('better-sqlite3');
+} catch (error) {
+    console.error('❌ better-sqlite3 not installed. Please run: npm install better-sqlite3');
+    throw error;
+}
+
+const dbPath = path.join(__dirname, '../data/database.sqlite');
+
+// Initialize database connection
+let db;
+
+function initDB() {
+    try {
+        // Check if database file exists
+        if (!fs.existsSync(dbPath)) {
+            console.error(`❌ Database file not found: ${dbPath}`);
+            console.log('⚠️  Running setup script to create database...');
+            // You might want to auto-create the database here
+            throw new Error('Database file not found. Run setup-sqlite.js first.');
+        }
+        
+        db = new Database(dbPath);
+        db.pragma('foreign_keys = ON');
+        
+        // Test connection
+        const result = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all();
+        console.log(`✅ SQLite database initialized. Found ${result.length} tables.`);
+        
+        return Promise.resolve();
+    } catch (error) {
+        console.error('❌ Error initializing SQLite database:', error.message);
+        return Promise.reject(error);
+    }
+}
+
+// Close database connection (for graceful shutdown)
+function closeDB() {
+    if (db) {
+        db.close();
+        console.log('✅ Database connection closed');
+    }
+}
+
+// Client operations
+function getAllClients() {
+    const currentMonthYear = new Date().toISOString().slice(0, 7);
+    
+    const query = `
+        SELECT 
+            c.*,
+            CASE 
+                WHEN EXISTS (
+                    SELECT 1 FROM payments p 
+                    WHERE p.user_id = c.id 
+                    AND p.month_year = ? 
+                    AND p.status = 'paid'
+                ) THEN 'paid'
+                ELSE 'pending'
+            END as payment_status,
+            CASE 
+                WHEN EXISTS (
+                    SELECT 1 FROM payments p 
+                    WHERE p.user_id = c.id 
+                    AND p.month_year = ? 
+                    AND p.status = 'paid'
+                ) THEN 1
+                ELSE 0
+            END as has_paid_this_month
+        FROM clients c
+        ORDER BY c.name
+    `;
+    
+    return db.prepare(query).all(currentMonthYear, currentMonthYear);
+}
+
+function getClientByUsername(username) {
+    const query = 'SELECT * FROM clients WHERE pppoe_username = ?';
+    return db.prepare(query).get(username);
+}
+
+function getClientById(id) {
+    const query = 'SELECT * FROM clients WHERE id = ?';
+    return db.prepare(query).get(id);
+}
+
+function addClient(clientData) {
+    const {
+        pppoe_username,
+        full_name,
+        address,
+        phone,
+        plan,
+        ip_address,
+        monthly_fee = 0,
+        status = 'active'
+    } = clientData;
+    
+    const id = Date.now().toString();
+    const created_at = new Date().toISOString();
+    
+    const query = `
+        INSERT INTO clients (
+            id, name, pppoe_username, full_name, address, phone,
+            plan, ip_address, monthly_fee, status, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    
+    const stmt = db.prepare(query);
+    const result = stmt.run(
+        id,
+        pppoe_username, // Use pppoe_username as name
+        pppoe_username,
+        full_name || null,
+        address || null,
+        phone || null,
+        plan,
+        ip_address || null,
+        monthly_fee,
+        status,
+        created_at
+    );
+    
+    return {
+        id,
+        pppoe_username,
+        full_name,
+        address,
+        phone,
+        plan,
+        ip_address,
+        monthly_fee,
+        status,
+        created_at
+    };
+}
+
+// Payment operations
+function updatePayment(username) {
+    const client = getClientByUsername(username);
+    if (!client) {
+        return false;
+    }
+    
+    const monthYear = new Date().toISOString().slice(0, 7);
+    
+    // Check if payment already exists
+    const existingPayment = db.prepare(`
+        SELECT * FROM payments 
+        WHERE user_id = ? AND month_year = ?
+    `).get(client.id, monthYear);
+    
+    if (existingPayment) {
+        // Update existing payment
+        const updateStmt = db.prepare(`
+            UPDATE payments 
+            SET status = 'paid', paid_at = ?, payment_method = 'telegram'
+            WHERE id = ?
+        `);
+        updateStmt.run(new Date().toISOString(), existingPayment.id);
+    } else {
+        // Insert new payment
+        const insertStmt = db.prepare(`
+            INSERT INTO payments (id, user_id, month_year, amount, status, paid_at, payment_method)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        `);
+        
+        insertStmt.run(
+            Date.now().toString(),
+            client.id,
+            monthYear,
+            0, // Default amount
+            'paid',
+            new Date().toISOString(),
+            'telegram'
+        );
+        
+        // Also create a transaction record
+        const txStmt = db.prepare(`
+            INSERT INTO transactions (id, date, type, amount, category, description)
+            VALUES (?, ?, ?, ?, ?, ?)
+        `);
+        
+        txStmt.run(
+            `tx_${Date.now()}`,
+            new Date().toISOString(),
+            'IN',
+            0,
+            'subscription',
+            `Payment from ${username} for ${monthYear}`
+        );
+    }
+    
+    // Update client's last paid month
+    const updateClientStmt = db.prepare(`
+        UPDATE clients SET last_paid_month = ? WHERE id = ?
+    `);
+    updateClientStmt.run(monthYear, client.id);
+    
+    return true;
+}
+
+// Stats and financial summary
+function getStats() {
+    const totalClients = db.prepare('SELECT COUNT(*) as count FROM clients').get().count;
+    
+    const currentMonthYear = new Date().toISOString().slice(0, 7);
+    const paidThisMonth = db.prepare(`
+        SELECT COUNT(DISTINCT user_id) as count 
+        FROM payments 
+        WHERE month_year = ? AND status = 'paid'
+    `).get(currentMonthYear).count;
+    
+    const pendingPayments = totalClients - paidThisMonth;
+    
+    return {
+        totalUsers: totalClients,
+        paidThisMonth,
+        pendingPayments,
+        paymentData: [paidThisMonth, pendingPayments, 0]
+    };
+}
+
+function getFinancialSummary() {
+    // Total monthly revenue (sum of all monthly fees)
+    const totalMonthlyRevenue = db.prepare(`
+        SELECT COALESCE(SUM(monthly_fee), 0) as total 
+        FROM clients 
+        WHERE status = 'active'
+    `).get().total;
+    
+    // Total payments received this month
+    const currentMonthYear = new Date().toISOString().slice(0, 7);
+    const thisMonthRevenue = db.prepare(`
+        SELECT COALESCE(SUM(amount), 0) as total 
+        FROM payments 
+        WHERE month_year = ? AND status = 'paid'
+    `).get(currentMonthYear).total;
+    
+    // Total outstanding (active clients who haven't paid this month)
+    const outstandingQuery = `
+        SELECT COALESCE(SUM(c.monthly_fee), 0) as total
+        FROM clients c
+        WHERE c.status = 'active'
+        AND NOT EXISTS (
+            SELECT 1 FROM payments p 
+            WHERE p.user_id = c.id 
+            AND p.month_year = ? 
+            AND p.status = 'paid'
+        )
+    `;
+    const outstanding = db.prepare(outstandingQuery).get(currentMonthYear).total;
+    
+    // Recent transactions (last 10)
+    const recentTransactions = db.prepare(`
+        SELECT * FROM transactions 
+        ORDER BY date DESC 
+        LIMIT 10
+    `).all();
+    
+    return {
+        totalMonthlyRevenue,
+        thisMonthRevenue,
+        outstanding,
+        recentTransactions
+    };
+}
+
+// Configuration operations
+function getConfig() {
+    const rows = db.prepare('SELECT key, value FROM config').all();
+    const config = {};
+    
+    rows.forEach(row => {
+        try {
+            // Try to parse JSON values
+            config[row.key] = JSON.parse(row.value);
+        } catch {
+            // If not JSON, use string value
+            config[row.key] = row.value;
+        }
+    });
+    
+    return config;
+}
+
+function updateConfig(newConfig) {
+    const stmt = db.prepare('INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)');
+    
+    Object.entries(newConfig).forEach(([key, value]) => {
+        const stringValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
+        stmt.run(key, stringValue);
+    });
+    
+    return getConfig();
+}
+
+// Find user by name or IP (single result - for backward compatibility)
+function findUserByNameOrIP(searchTerm) {
+    const query = `
+        SELECT * FROM clients 
+        WHERE pppoe_username LIKE ? 
+           OR full_name LIKE ?
+           OR ip_address LIKE ?
+        LIMIT 1
+    `;
+    const searchPattern = `%${searchTerm}%`;
+    return db.prepare(query).get(searchPattern, searchPattern, searchPattern);
+}
+
+// Search users by name or IP (multiple results)
+function searchUsersByNameOrIP(searchTerm) {
+    const query = `
+        SELECT * FROM clients 
+        WHERE LOWER(pppoe_username) LIKE LOWER(?)
+           OR LOWER(full_name) LIKE LOWER(?)
+           OR ip_address LIKE ?
+        ORDER BY pppoe_username
+        LIMIT 20
+    `;
+    const searchPattern = `%${searchTerm}%`;
+    return db.prepare(query).all(searchPattern, searchPattern, searchPattern);
+}
+
+// Update user monthly fee
+function updateUserMonthlyFee(username, newFee) {
+    const query = 'UPDATE clients SET monthly_fee = ? WHERE pppoe_username = ?';
+    const result = db.prepare(query).run(newFee, username);
+    return result.changes > 0;
+}
+
+// Update user (for createOrUpdateUser)
+function updateUser(userData) {
+    const {
+        pppoe_username,
+        full_name = '',
+        address = '',
+        phone = '',
+        plan = 'custom',
+        ip_address = '',
+        monthly_fee = 0,
+        status = 'active'
+    } = userData;
+    
+    const query = `
+        UPDATE clients 
+        SET full_name = ?, address = ?, phone = ?, plan = ?, 
+            ip_address = ?, monthly_fee = ?, status = ?
+        WHERE pppoe_username = ?
+    `;
+    
+    const result = db.prepare(query).run(
+        full_name, address, phone, plan, 
+        ip_address, monthly_fee, status, 
+        pppoe_username
+    );
+    
+    return result.changes > 0;
+}
+
+// Create or update user
+function createOrUpdateUser(userData) {
+    // Try to find existing user
+    const existingUser = getClientByUsername(userData.pppoe_username);
+    
+    if (existingUser) {
+        // Update existing user
+        return updateUser(userData);
+    } else {
+        // Add new user
+        return addClient(userData);
+    }
+}
+
+// Operational expenses functions (need expenses table)
+function getOperationalExpenses(month, year) {
+    try {
+        // Check if expenses table exists
+        const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='expenses'").get();
+        
+        if (!tableCheck) {
+            // Table doesn't exist yet
+            console.log('⚠️  Expenses table not found, returning empty array');
+            return [];
+        }
+        
+        const query = 'SELECT * FROM expenses WHERE month = ? AND year = ? ORDER BY recorded_at DESC';
+        return db.prepare(query).all(month, year);
+    } catch (error) {
+        console.error('Error getting operational expenses:', error);
+        return [];
+    }
+}
+
+function addOperationalExpense(expenseData) {
+    try {
+        // Check if expenses table exists, create if not
+        const tableCheck = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='expenses'").get();
+        
+        if (!tableCheck) {
+            // Create expenses table
+            const createTable = `
+                CREATE TABLE expenses (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    category TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    amount INTEGER NOT NULL,
+                    month INTEGER NOT NULL,
+                    year INTEGER NOT NULL,
+                    recorded_by TEXT,
+                    recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            `;
+            db.prepare(createTable).run();
+            console.log('✅ Created expenses table');
+        }
+        
+        const {
+            category,
+            description,
+            amount,
+            month,
+            year,
+            recorded_by = 'telegram_bot'
+        } = expenseData;
+        
+        const query = `
+            INSERT INTO expenses (category, description, amount, month, year, recorded_by, recorded_at)
+            VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+        `;
+        
+        const result = db.prepare(query).run(category, description, amount, month, year, recorded_by);
+        return result.changes > 0;
+    } catch (error) {
+        console.error('Error adding operational expense:', error);
+        return false;
+    }
+}
+
+// Export functions
+module.exports = {
+    initDB,
+    closeDB,
+    getAllUsers: getAllClients, // Alias for backward compatibility
+    getAllClients,
+    getUserByUsername: getClientByUsername, // Alias
+    getClientByUsername,
+    getUserById: getClientById, // Alias
+    getClientById,
+    addUser: addClient, // Alias
+    addClient,
+    updatePayment,
+    updateUserMonthlyFee,
+    findUserByNameOrIP,
+    searchUsersByNameOrIP,
+    createOrUpdateUser,
+    getOperationalExpenses,
+    addOperationalExpense,
+    getStats,
+    getFinancialSummary,
+    getConfig,
+    updateConfig
+};

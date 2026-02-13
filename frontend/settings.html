@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - ISP Dashboard</title>
+    <link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <link rel="stylesheet" href="assets/css/output.css">
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800">Settings</h1>
+                <p class="text-gray-600 mt-2">Manage your ISP Dashboard configuration</p>
+            </div>
+            <div class="flex space-x-4">
+                <a href="index.html" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition">
+                    ← Dashboard
+                </a>
+                <a href="secrets.html" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition">
+                    Secrets
+                </a>
+            </div>
+        </div>
+
+        <!-- Connection Status -->
+        <div class="bg-white rounded-lg shadow p-6 mb-8">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Connection Status</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="p-4 border rounded-lg">
+                    <div class="text-sm text-gray-500">Backend API</div>
+                    <div id="api-status" class="text-2xl font-bold mt-2 flex items-center">
+                        <span class="inline-block w-3 h-3 rounded-full mr-2 bg-yellow-500"></span>
+                        Checking...
+                    </div>
+                </div>
+                <div class="p-4 border rounded-lg">
+                    <div class="text-sm text-gray-500">Mikrotik Router</div>
+                    <div id="mikrotik-status" class="text-2xl font-bold mt-2 flex items-center">
+                        <span class="inline-block w-3 h-3 rounded-full mr-2 bg-yellow-500"></span>
+                        Checking...
+                    </div>
+                </div>
+                <div class="p-4 border rounded-lg">
+                    <div class="text-sm text-gray-500">Database</div>
+                    <div id="db-status" class="text-2xl font-bold mt-2 flex items-center">
+                        <span class="inline-block w-3 h-3 rounded-full mr-2 bg-yellow-500"></span>
+                        Checking...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- API Key Configuration -->
+        <div class="bg-white rounded-lg shadow p-6 mb-8">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">API Key Configuration</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Current API Key</label>
+                    <div class="flex">
+                        <input type="text" id="current-api-key" readonly
+                               class="flex-1 px-4 py-2 border border-gray-300 rounded-l-lg bg-gray-50">
+                        <button onclick="copyApiKey()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-r-lg">
+                            Copy
+                        </button>
+                    </div>
+                    <p class="text-sm text-gray-500 mt-2">This key is used for authentication between frontend and backend</p>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Generate New API Key</label>
+                    <div class="flex space-x-4">
+                        <button onclick="generateApiKey()" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg">
+                            Generate New Key
+                        </button>
+                        <button onclick="updateFrontendKey()" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg">
+                            Update Frontend
+                        </button>
+                    </div>
+                    <p class="text-sm text-gray-500 mt-2">Generate a new secure API key and update the frontend configuration</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Server Configuration -->
+        <div class="bg-white rounded-lg shadow p-6 mb-8">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Server Configuration</h2>
+            <div class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Server URL</label>
+                        <input type="text" id="server-url" value="http://192.168.2.203:3000"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">API Base URL</label>
+                        <input type="text" id="api-base-url" value="http://192.168.2.203:3000"
+                               class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                    </div>
+                </div>
+<button onclick="saveServerConfig()" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg">
+    Save Server Configuration
+</button>
+</div>
+</div>
+<!-- Mikrotik Configuration -->
+<div class="bg-white rounded-lg shadow p-6 mb-8">
+    <h2 class="text-xl font-bold text-gray-800 mb-4">🖥️ Mikrotik Router Configuration</h2>
+    <p class="text-gray-600 mb-4">Configure your Mikrotik router connection. Settings are saved permanently in the database.</p>
+    <div class="space-y-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Mikrotik IP Address</label>
+                <input type="text" id="mikrotik-ip" placeholder="192.168.88.1" 
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                <p class="text-sm text-gray-500 mt-1">IP address of your Mikrotik router</p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">API Port</label>
+                <input type="number" id="mikrotik-port" value="8728" placeholder="8728" 
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                <p class="text-sm text-gray-500 mt-1">Default: 8728 (API), 8729 (API-SSL)</p>
+            </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                <input type="text" id="mikrotik-user" placeholder="admin" 
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+                <p class="text-sm text-gray-500 mt-1">Mikrotik user with API access</p>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                <div class="relative">
+                    <input type="password" id="mikrotik-pass" placeholder="••••••••" 
+                           class="w-full px-4 py-2 border border-gray-300 rounded-lg pr-10">
+                    <button type="button" onclick="toggleMikrotikPassword()" 
+                            class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700">
+                        <span id="mikrotik-pass-icon">👁️</span>
+                    </button>
+                </div>
+                <p class="text-sm text-gray-500 mt-1" id="mikrotik-pass-status">Leave empty to keep current password</p>
+            </div>
+        </div>
+        <div class="flex flex-wrap gap-4">
+            <button onclick="saveMikrotikSettings()" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg">
+                💾 Save Mikrotik Settings
+            </button>
+            <button onclick="testMikrotikConnection()" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg">
+                🔌 Test Connection
+            </button>
+        </div>
+        <div id="mikrotik-status-message" class="hidden mt-4 p-4 rounded-lg"></div>
+    </div>
+</div>
+
+<!-- Telegram Bot Configuration -->
+<div class="bg-white rounded-lg shadow p-6 mb-8">
+    <h2 class="text-xl font-bold text-gray-800 mb-4">📱 Telegram Bot Configuration</h2>
+    <p class="text-gray-600 mb-4">Configure Telegram bot for notifications. Settings are saved permanently in the database.</p>
+    <div class="space-y-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Telegram Bot Token</label>
+            <div class="relative">
+                <input type="password" id="telegram-token" placeholder="123456789:ABCdefGHIjklMNOpqrsTUVwxyz" 
+                       class="w-full px-4 py-2 border border-gray-300 rounded-lg pr-10">
+                <button type="button" onclick="toggleTelegramToken()" 
+                        class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700">
+                    <span id="telegram-token-icon">👁️</span>
+                </button>
+            </div>
+            <p class="text-sm text-gray-500 mt-1" id="telegram-token-status">Get token from @BotFather on Telegram</p>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Admin Chat ID</label>
+            <input type="text" id="telegram-admin-id" placeholder="123456789" 
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+            <p class="text-sm text-gray-500 mt-1">Your Telegram chat ID for admin notifications</p>
+        </div>
+        <div class="flex flex-wrap gap-4">
+            <button onclick="saveTelegramSettings()" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg">
+                💾 Save Telegram Settings
+            </button>
+            <button onclick="testTelegramBot()" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg">
+                📤 Test Send Message
+            </button>
+        </div>
+        <div id="telegram-status-message" class="hidden mt-4 p-4 rounded-lg"></div>
+    </div>
+</div>
+
+<!-- WhatsApp Configuration -->
+<div class="bg-white rounded-lg shadow p-6 mb-8">
+    <h2 class="text-xl font-bold text-gray-800 mb-4">📱 WhatsApp Configuration</h2>
+    <p class="text-gray-600 mb-4">Configure WhatsApp notifications using OpenClaw. Settings are saved permanently in the database.</p>
+    <div class="space-y-4">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">OpenClaw WhatsApp Channel Name</label>
+            <input type="text" id="whatsapp-channel" placeholder="whatsapp" 
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+            <p class="text-sm text-gray-500 mt-1">OpenClaw channel name for WhatsApp (default: "whatsapp")</p>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Test Phone Number</label>
+            <input type="text" id="whatsapp-test-phone" placeholder="+6281234567890" 
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+            <p class="text-sm text-gray-500 mt-1">Phone number for testing WhatsApp notifications</p>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">OpenClaw CLI Path</label>
+            <input type="text" id="openclaw-path" placeholder="openclaw" 
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg">
+            <p class="text-sm text-gray-500 mt-1">Path to OpenClaw CLI executable (default: "openclaw" from PATH)</p>
+        </div>
+        <div class="flex flex-wrap gap-4">
+            <button onclick="saveWhatsAppSettings()" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg">
+                💾 Save WhatsApp Settings
+            </button>
+            <button onclick="testWhatsAppService()" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg">
+                🔌 Test WhatsApp Service
+            </button>
+            <button onclick="sendTestWhatsApp()" class="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg">
+                📤 Send Test Message
+            </button>
+        </div>
+        <div id="whatsapp-status-message" class="hidden mt-4 p-4 rounded-lg"></div>
+    </div>
+</div>
+
+        <!-- Data Management -->
+        <div class="bg-white rounded-lg shadow p-6 mb-8">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Data Management</h2>
+            <div id="data-management-content">
+                <p class="text-gray-600 mb-4">Manage customer data for synchronization across dashboard, financial, and WhatsApp controller.</p>
+                <div class="flex flex-wrap gap-4 mb-6">
+                    <button onclick="loadUserData()" class="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg">
+                        Load User Data
+                    </button>
+                    <button onclick="validateData()" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg">
+                        Validate Data
+                    </button>
+                    <button onclick="showBulkEdit()" class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg">
+                        Bulk Edit
+                    </button>
+                    <button onclick="fixMissingData()" class="px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg">
+                        Fix Missing Data
+                    </button>
+                </div>
+                <div id="data-table-container" class="hidden">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200" id="user-data-table">
+                            <thead>
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">PPPoE Username</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone Number</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Due Date</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monthly Fee</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="user-data-body">
+                                <!-- Data will be loaded via JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="mt-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                            <span id="data-summary" class="text-sm text-gray-600">0 users loaded</span>
+                            <div id="data-status" class="text-xs text-gray-500 mt-1"></div>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="saveBulkChanges()" class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg">
+                                Save All Changes
+                            </button>
+                            <button onclick="hideDataTable()" class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg">
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div id="validation-results" class="hidden mt-6">
+                    <!-- Validation results will be displayed here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">Quick Actions</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <button onclick="testAllConnections()" class="p-4 bg-green-500 hover:bg-green-600 text-white rounded-lg">
+                    <div class="text-lg font-bold">Test All Connections</div>
+                    <div class="text-sm">Check API, Mikrotik, and Database</div>
+                </button>
+                <button onclick="clearCache()" class="p-4 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg">
+                    <div class="text-lg font-bold">Clear Cache</div>
+                    <div class="text-sm">Clear browser cache and reload</div>
+                </button>
+                <button onclick="viewLogs()" class="p-4 bg-gray-500 hover:bg-gray-600 text-white rounded-lg">
+                    <div class="text-lg font-bold">View Logs</div>
+                    <div class="text-sm">Open server logs in new tab</div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="assets/js/config.js"></script>
+    <script>
+    // ==================== App Settings (Mikrotik & Telegram) ====================
+    
+    // Load app settings on page load
+    async function loadAppSettings() {
+        try {
+            const response = await window.ISP_CONFIG.fetchAPI('/api/settings/app-settings');
+            if (response.success) {
+                const settings = response.settings;
+                
+                // Load Mikrotik settings
+                document.getElementById('mikrotik-ip').value = settings.mikrotik_ip || '';
+                document.getElementById('mikrotik-port').value = settings.mikrotik_port || 8728;
+                document.getElementById('mikrotik-user').value = settings.mikrotik_user || '';
+                document.getElementById('mikrotik-pass').value = '';
+                if (settings.mikrotik_has_password) {
+                    document.getElementById('mikrotik-pass-status').textContent = '✓ Password is set (leave empty to keep current)';
+                }
+                
+                // Load Telegram settings
+                document.getElementById('telegram-token').value = '';
+                document.getElementById('telegram-admin-id').value = settings.telegram_admin_id || '';
+                if (settings.telegram_has_token) {
+                    document.getElementById('telegram-token-status').textContent = '✓ Token is set (leave empty to keep current)';
+                }
+            }
+        } catch (error) {
+            console.error('Failed to load app settings:', error);
+        }
+    }
+    
+    // Toggle password visibility for Mikrotik
+    function toggleMikrotikPassword() {
+        const input = document.getElementById('mikrotik-pass');
+        const icon = document.getElementById('mikrotik-pass-icon');
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.textContent = '🔒';
+        } else {
+            input.type = 'password';
+            icon.textContent = '👁️';
+        }
+    }
+    
+    // Toggle token visibility for Telegram
+    function toggleTelegramToken() {
+        const input = document.getElementById('telegram-token');
+        const icon = document.getElementById('telegram-token-icon');
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.textContent = '🔒';
+        } else {
+            input.type = 'password';
+            icon.textContent = '👁️';
+        }
+    }
+    
+    // Save Mikrotik settings permanently
+    async function saveMikrotikSettings() {
+        const mikrotik_ip = document.getElementById('mikrotik-ip').value.trim();
+        const mikrotik_user = document.getElementById('mikrotik-user').value.trim();
+        const mikrotik_pass = document.getElementById('mikrotik-pass').value;
+        const mikrotik_port = parseInt(document.getElementById('mikrotik-port').value) || 8728;
+        
+        if (!mikrotik_ip) {
+            showStatusMessage('mikrotik-status-message', 'Mikrotik IP address is required!', 'error');
+            return;
+        }
+        
+        try {
+            const response = await window.ISP_CONFIG.fetchAPI('/api/settings/mikrotik', {
+                method: 'POST',
+                body: JSON.stringify({
+                    mikrotik_ip,
+                    mikrotik_user,
+                    mikrotik_pass,
+                    mikrotik_port
+                })
+            });
+            
+            if (response.success) {
+                showStatusMessage('mikrotik-status-message', '✅ ' + response.message, 'success');
+                // Update password status
+                if (response.settings.mikrotik_has_password) {
+                    document.getElementById('mikrotik-pass-status').textContent = '✓ Password is set (leave empty to keep current)';
+                }
+                document.getElementById('mikrotik-pass').value = '';
+            } else {
+                showStatusMessage('mikrotik-status-message', '❌ ' + response.error, 'error');
+            }
+        } catch (error) {
+            showStatusMessage('mikrotik-status-message', '❌ Error: ' + error.message, 'error');
+        }
+    }
+    
+    // Test Mikrotik connection
+    async function testMikrotikConnection() {
+        const mikrotik_ip = document.getElementById('mikrotik-ip').value.trim();
+        
+        if (!mikrotik_ip) {
+            showStatusMessage('mikrotik-status-message', 'Please enter Mikrotik IP first!', 'error');
+            return;
+        }
+        
+        showStatusMessage('mikrotik-status-message', '🔄 Testing connection...', 'info');
+        
+        try {
+            const response = await window.ISP_CONFIG.fetchAPI('/api/settings/mikrotik/test', {
+                method: 'POST',
+                body: JSON.stringify({
+                    mikrotik_ip,
+                    mikrotik_user: document.getElementById('mikrotik-user').value.trim(),
+                    mikrotik_pass: document.getElementById('mikrotik-pass').value,
+                    mikrotik_port: parseInt(document.getElementById('mikrotik-port').value) || 8728
+                })
+            });
+            
+            if (response.success) {
+                showStatusMessage('mikrotik-status-message', 
+                    `✅ Connected! Router: ${response.data.routerName}, Version: ${response.data.version}`, 
+                    'success');
+            } else {
+                showStatusMessage('mikrotik-status-message', '❌ ' + response.error, 'error');
+            }
+        } catch (error) {
+            showStatusMessage('mikrotik-status-message', '❌ Error: ' + error.message, 'error');
+        }
+    }
+    
+    // Save Telegram settings permanently
+    async function saveTelegramSettings() {
+        const telegram_token = document.getElementById('telegram-token').value.trim();
+        const telegram_admin_id = document.getElementById('telegram-admin-id').value.trim();
+        
+        if (!telegram_token && !telegram_admin_id) {
+            showStatusMessage('telegram-status-message', 'Please enter at least one field!', 'error');
+            return;
+        }
+        
+        try {
+            const response = await window.ISP_CONFIG.fetchAPI('/api/settings/telegram', {
+                method: 'POST',
+                body: JSON.stringify({
+                    telegram_token,
+                    telegram_admin_id
+                })
+            });
+            
+            if (response.success) {
+                showStatusMessage('telegram-status-message', '✅ ' + response.message, 'success');
+                // Update token status
+                if (response.settings.telegram_has_token) {
+                    document.getElementById('telegram-token-status').textContent = '✓ Token is set (leave empty to keep current)';
+                }
+                document.getElementById('telegram-token').value = '';
+            } else {
+                showStatusMessage('telegram-status-message', '❌ ' + response.error, 'error');
+            }
+        } catch (error) {
+            showStatusMessage('telegram-status-message', '❌ Error: ' + error.message, 'error');
+        }
+    }
+    
+    // Test Telegram bot
+    async function testTelegramBot() {
+        const chatId = prompt('Enter Telegram chat ID to send test message:');
+        if (!chatId) {
+            return;
+        }
+        
+        showStatusMessage('telegram-status-message', '🔄 Sending test message...', 'info');
+        
+        try {
+            // First get the token from backend (we can't access it directly for security)
+            const settingsResponse = await window.ISP_CONFIG.fetchAPI('/api/settings/app-settings');
+            
+            // Use backend to send test message
+            const response = await window.ISP_CONFIG.fetchAPI('/api/telegram/test-send', {
+                method: 'POST',
+                body: JSON.stringify({
+                    chat_id: chatId,
+                    message: 'Test message from ISP Dashboard at ' + new Date().toLocaleString('id-ID')
+                })
+            });
+            
+            if (response.success) {
+                showStatusMessage('telegram-status-message', '✅ Test message sent successfully!', 'success');
+            } else {
+                showStatusMessage('telegram-status-message', '❌ ' + (response.error || 'Failed to send message'), 'error');
+            }
+        } catch (error) {
+            // Fallback: try direct API if backend endpoint not available
+            try {
+                const token = document.getElementById('telegram-token').value.trim();
+                if (!token) {
+                    showStatusMessage('telegram-status-message', '❌ Please save Telegram token first!', 'error');
+                    return;
+                }
+                
+                const message = encodeURIComponent('Test message from ISP Dashboard at ' + new Date().toLocaleString('id-ID'));
+                const url = `https://api.telegram.org/bot${token}/sendMessage?chat_id=${chatId}&text=${message}`;
+                const resp = await fetch(url);
+                const data = await resp.json();
+                
+                if (data.ok) {
+                    showStatusMessage('telegram-status-message', '✅ Test message sent successfully!', 'success');
+                } else {
+                    showStatusMessage('telegram-status-message', '❌ ' + data.description, 'error');
+                }
+            } catch (e) {
+                showStatusMessage('telegram-status-message', '❌ Error: ' + e.message, 'error');
+            }
+        }
+    }
+    
+    // Helper function to show status messages
+    function showStatusMessage(elementId, message, type) {
+        const el = document.getElementById(elementId);
+        el.classList.remove('hidden', 'bg-green-100', 'bg-red-100', 'bg-blue-100', 'text-green-800', 'text-red-800', 'text-blue-800');
+        
+        if (type === 'success') {
+            el.classList.add('bg-green-100', 'text-green-800');
+        } else if (type === 'error') {
+            el.classList.add('bg-red-100', 'text-red-800');
+        } else {
+            el.classList.add('bg-blue-100', 'text-blue-800');
+        }
+        
+        el.textContent = message;
+        el.classList.remove('hidden');
+        
+        // Auto-hide after 10 seconds for success messages
+        if (type === 'success') {
+            setTimeout(() => {
+                el.classList.add('hidden');
+            }, 10000);
+        }
+    }
+    
+    // ==================== WhatsApp Configuration Functions ====================
+    
+    // Load WhatsApp settings on page load
+    async function loadWhatsAppSettings() {
+        try {
+            const response = await window.ISP_CONFIG.fetchAPI('/api/settings/whatsapp');
+            if (response.success) {
+                const settings = response.settings;
+                
+                // Load WhatsApp settings
+                document.getElementById('whatsapp-channel').value = settings.whatsapp_channel || 'whatsapp';
+                document.getElementById('whatsapp-test-phone').value = settings.whatsapp_test_phone || '';
+                document.getElementById('openclaw-path').value = settings.openclaw_path || 'openclaw';
+            }
+        } catch (error) {
+            console.error('Failed to load WhatsApp settings:', error);
+        }
+    }
+    
+    // Save WhatsApp settings permanently
+    async function saveWhatsAppSettings() {
+        const whatsapp_channel = document.getElementById('whatsapp-channel').value.trim() || 'whatsapp';
+        const whatsapp_test_phone = document.getElementById('whatsapp-test-phone').value.trim();
+        const openclaw_path = document.getElementById('openclaw-path').value.trim() || 'openclaw';
+        
+        try {
+            const response = await window.ISP_CONFIG.fetchAPI('/api/settings/whatsapp', {
+                method: 'POST',
+                body: JSON.stringify({
+                    whatsapp_channel,
+                    whatsapp_test_phone,
+                    openclaw_path
+                })
+            });
+            
+            if (response.success) {
+                showStatusMessage('whatsapp-status-message', '✅ ' + response.message, 'success');
+            } else {
+                showStatusMessage('whatsapp-status-message', '❌ ' + response.error, 'error');
+            }
+        } catch (error) {
+            showStatusMessage('whatsapp-status-message', '❌ Error: ' + error.message, 'error');
+        }
+    }
+    
+    // Test WhatsApp service
+    async function testWhatsAppService() {
+        showStatusMessage('whatsapp-status-message', '🔄 Testing WhatsApp service...', 'info');
+        
+        try {
+            const response = await window.ISP_CONFIG.fetchAPI('/api/whatsapp/service-status');
+            
+            if (response.success) {
+                const status = response.status;
+                let message = '';
+                
+                if (status.openclaw_cli) {
+                    message += `✅ OpenClaw CLI: ${status.openclaw_version || 'Available'}\n`;
+                } else {
+                    message += `❌ OpenClaw CLI: Not available\n`;
+                }
+                
+                if (status.whatsapp_channel) {
+                    message += `✅ WhatsApp channel: Configured\n`;
+                } else {
+                    message += `❌ WhatsApp channel: Not configured\n`;
+                }
+                
+                message += `\nStatus: ${status.message}`;
+                
+                showStatusMessage('whatsapp-status-message', message, status.openclaw_cli && status.whatsapp_channel ? 'success' : 'error');
+            } else {
+                showStatusMessage('whatsapp-status-message', '❌ ' + response.error, 'error');
+            }
+        } catch (error) {
+            showStatusMessage('whatsapp-status-message', '❌ Error: ' + error.message, 'error');
+        }
+    }
+    
+    // Send test WhatsApp message
+    async function sendTestWhatsApp() {
+        const testPhone = document.getElementById('whatsapp-test-phone').value.trim();
+        const phoneNumber = prompt('Enter phone number to send test WhatsApp message:', testPhone || '+6281234567890');
+        
+        if (!phoneNumber) {
+            return;
+        }
+        
+        showStatusMessage('whatsapp-status-message', '🔄 Sending test WhatsApp message...', 'info');
+        
+        try {
+            // Use the existing WhatsApp API endpoint for test messages
+            // First get a user ID to use for testing
+            const usersResponse = await window.ISP_CONFIG.fetchAPI('/api/whatsapp/users');
+            
+            if (usersResponse.success && usersResponse.users.length > 0) {
+                const testUser = usersResponse.users[0];
+                
+                const testResponse = await window.ISP_CONFIG.fetchAPI('/api/whatsapp/send-test', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        userId: testUser.id,
+                        status: 'H-3'
+                    })
+                });
+                
+                if (testResponse.success) {
+                    showStatusMessage('whatsapp-status-message', 
+                        '✅ Test WhatsApp message sent successfully!\n' +
+                        `To: ${phoneNumber}\n` +
+                        `User: ${testUser.name}\n` +
+                        `Status: H-3 (3 days before due date)`,
+                        'success');
+                } else {
+                    showStatusMessage('whatsapp-status-message', '❌ ' + testResponse.error, 'error');
+                }
+            } else {
+                showStatusMessage('whatsapp-status-message', '❌ No users found for testing', 'error');
+            }
+        } catch (error) {
+            showStatusMessage('whatsapp-status-message', '❌ Error: ' + error.message, 'error');
+        }
+    }
+    </script>
+    <script>
+        // Load current configuration
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCurrentConfig();
+            loadAppSettings(); // Load Mikrotik & Telegram settings from backend
+            loadWhatsAppSettings(); // Load WhatsApp settings from backend
+            testConnections();
+        });
+
+        function loadCurrentConfig() {
+            // Load API key from config
+            document.getElementById('current-api-key').value = window.ISP_CONFIG?.API_KEY || 'isp_dashboard_api_key_2026';
+            
+            // Load server URLs
+            document.getElementById('server-url').value = window.ISP_CONFIG?.API_BASE_URL || window.location.origin || 'http://192.168.2.203:3000';
+            document.getElementById('api-base-url').value = window.ISP_CONFIG?.API_BASE_URL || window.location.origin || 'http://192.168.2.203:3000';
+        }
+
+        function copyApiKey() {
+            const input = document.getElementById('current-api-key');
+            input.select();
+            document.execCommand('copy');
+            alert('API key copied to clipboard!');
+        }
+
+        function generateApiKey() {
+            // Generate a random API key
+            const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-';
+            let newKey = '';
+            for (let i = 0; i < 32; i++) {
+                newKey += charset.charAt(Math.floor(Math.random() * charset.length));
+            }
+            document.getElementById('current-api-key').value = 'isp_' + newKey;
+        }
+
+        function updateFrontendKey() {
+            const newKey = document.getElementById('current-api-key').value;
+            if (!newKey || newKey.length < 10) {
+                alert('Please generate a valid API key first (at least 10 characters)');
+                return;
+            }
+            
+            // Update the frontend config (this would normally be saved to a config file)
+            if (window.ISP_CONFIG) {
+                window.ISP_CONFIG.API_KEY = newKey;
+                alert('Frontend API key updated! Note: This change is temporary and will reset on page refresh. To make it permanent, update config.js file.');
+            } else {
+                alert('Cannot update: ISP_CONFIG not found');
+            }
+        }
+
+        function saveServerConfig() {
+            const serverUrl = document.getElementById('server-url').value;
+            const apiBaseUrl = document.getElementById('api-base-url').value;
+            
+            if (window.ISP_CONFIG) {
+                window.ISP_CONFIG.API_BASE_URL = apiBaseUrl;
+                alert('Server configuration updated! Note: This change is temporary. To make it permanent, update config.js file.');
+            } else {
+                alert('Cannot update: ISP_CONFIG not found');
+            }
+        }
+
+        async function testConnections() {
+            // Test API connection
+            try {
+                const health = await window.ISP_CONFIG.fetchAPI('/health');
+                document.getElementById('api-status').innerHTML = 
+                    '<span class="inline-block w-3 h-3 rounded-full mr-2 bg-green-500"></span>Connected';
+            } catch (error) {
+                document.getElementById('api-status').innerHTML = 
+                    '<span class="inline-block w-3 h-3 rounded-full mr-2 bg-red-500"></span>Failed: ' + error.message;
+            }
+
+            // Test Mikrotik connection
+            try {
+                const mikrotik = await window.ISP_CONFIG.fetchAPI('/api/mikrotik/test');
+                document.getElementById('mikrotik-status').innerHTML = 
+                    '<span class="inline-block w-3 h-3 rounded-full mr-2 bg-green-500"></span>Connected';
+            } catch (error) {
+                document.getElementById('mikrotik-status').innerHTML = 
+                    '<span class="inline-block w-3 h-3 rounded-full mr-2 bg-red-500"></span>Failed: ' + error.message;
+            }
+
+            // Test Database connection
+            try {
+                const stats = await window.ISP_CONFIG.fetchAPI('/api/stats');
+                document.getElementById('db-status').innerHTML = 
+                    '<span class="inline-block w-3 h-3 rounded-full mr-2 bg-green-500"></span>Connected (' + stats.totalUsers + ' users)';
+            } catch (error) {
+                document.getElementById('db-status').innerHTML = 
+                    '<span class="inline-block w-3 h-3 rounded-full mr-2 bg-red-500"></span>Failed: ' + error.message;
+            }
+        }
+
+        function testAllConnections() {
+            document.getElementById('api-status').innerHTML = 
+                '<span class="inline-block w-3 h-3 rounded-full mr-2 bg-yellow-500"></span>Testing...';
+            document.getElementById('mikrotik-status').innerHTML = 
+                '<span class="inline-block w-3 h-3 rounded-full mr-2 bg-yellow-500"></span>Testing...';
+            document.getElementById('db-status').innerHTML = 
+                '<span class="inline-block w-3 h-3 rounded-full mr-2 bg-yellow-500"></span>Testing...';
+            
+            testConnections();
+        }
+
+        function clearCache() {
+            if (confirm('Clear browser cache and reload page?')) {
+                localStorage.clear();
+                sessionStorage.clear();
+                window.location.reload(true);
+            }
+        }
+
+        function viewLogs() {
+            window.open('/logs', '_blank');
+        }
+
+        // ==================== Data Management Functions ====================
+        
+        let userData = [];
+        let pendingUpdates = [];
+
+        async function loadUserData() {
+            try {
+                const response = await window.ISP_CONFIG.fetchAPI('/api/settings/users');
+                if (response.success) {
+                    userData = response.users;
+                    displayUserData();
+                    document.getElementById('data-table-container').classList.remove('hidden');
+                    document.getElementById('data-summary').textContent = `${userData.length} users loaded`;
+                    document.getElementById('data-status').textContent = '';
+                } else {
+                    alert('Failed to load user data: ' + response.error);
+                }
+            } catch (error) {
+                alert('Error loading user data: ' + error.message);
+            }
+        }
+
+        function displayUserData() {
+            const tbody = document.getElementById('user-data-body');
+            tbody.innerHTML = '';
+            
+            userData.forEach(user => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${escapeHtml(user.pppoe_username)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${escapeHtml(user.name || '')}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <input type="text" 
+                               class="phone-input w-full px-3 py-2 border border-gray-300 rounded-md text-sm" 
+                               value="${escapeHtml(user.phone_number || user.phone || '')}" 
+                               data-user-id="${user.id}" 
+                               data-field="phone_number" 
+                               onchange="markFieldChanged(this)" 
+                               placeholder="+62xxx or 08xxx">
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <input type="date" 
+                               class="due-date-input w-full px-3 py-2 border border-gray-300 rounded-md text-sm" 
+                               value="${user.due_date ? formatDateForInput(user.due_date) : ''}" 
+                               data-user-id="${user.id}" 
+                               data-field="due_date" 
+                               onchange="markFieldChanged(this)">
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${formatRupiah(user.monthly_fee)}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                            ${user.status}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <button onclick="saveSingleUser('${user.id}')" class="text-blue-600 hover:text-blue-900 disabled:text-gray-400 disabled:cursor-not-allowed" disabled>
+                            Save
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function formatDateForInput(dateString) {
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return '';
+            return date.toISOString().split('T')[0];
+        }
+
+        function formatRupiah(amount) {
+            return new Intl.NumberFormat('id-ID', {
+                style: 'currency',
+                currency: 'IDR',
+                minimumFractionDigits: 0
+            }).format(amount);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function markFieldChanged(input) {
+            const userId = input.dataset.userId;
+            const field = input.dataset.field;
+            const value = input.value;
+            
+            // Enable save button for this row
+            const row = input.closest('tr');
+            const saveButton = row.querySelector('button');
+            saveButton.disabled = false;
+            saveButton.classList.remove('disabled:text-gray-400', 'disabled:cursor-not-allowed');
+            saveButton.classList.add('text-blue-600', 'hover:text-blue-900');
+            
+            // Add to pending updates
+            const existingUpdateIndex = pendingUpdates.findIndex(u => u.userId === userId && u.field === field);
+            if (existingUpdateIndex >= 0) {
+                pendingUpdates[existingUpdateIndex].value = value;
+            } else {
+                pendingUpdates.push({ userId, field, value });
+            }
+            
+            updatePendingCount();
+        }
+
+        function updatePendingCount() {
+            const statusEl = document.getElementById('data-status');
+            if (pendingUpdates.length > 0) {
+                statusEl.textContent = `${pendingUpdates.length} pending change(s)`;
+                statusEl.className = 'text-xs text-yellow-600 mt-1';
+            } else {
+                statusEl.textContent = 'All changes saved';
+                statusEl.className = 'text-xs text-green-600 mt-1';
+            }
+        }
+
+        async function saveSingleUser(userId) {
+            const userUpdates = pendingUpdates.filter(u => u.userId === userId);
+            if (userUpdates.length === 0) {
+                alert('No changes to save for this user');
+                return;
+            }
+            
+            try {
+                const response = await window.ISP_CONFIG.fetchAPI('/api/settings/update-bulk', {
+                    method: 'POST',
+                    body: JSON.stringify({ updates: userUpdates })
+                });
+                
+                if (response.success) {
+                    // Remove from pending updates
+                    pendingUpdates = pendingUpdates.filter(u => u.userId !== userId);
+                    updatePendingCount();
+                    
+                    // Disable save button
+                    const row = document.querySelector(`input[data-user-id="${userId}"]`).closest('tr');
+                    const saveButton = row.querySelector('button');
+                    saveButton.disabled = true;
+                    saveButton.classList.add('disabled:text-gray-400', 'disabled:cursor-not-allowed');
+                    saveButton.classList.remove('text-blue-600', 'hover:text-blue-900');
+                    
+                    alert('Changes saved successfully!');
+                } else {
+                    alert('Failed to save changes: ' + JSON.stringify(response.errors));
+                }
+            } catch (error) {
+                alert('Error saving changes: ' + error.message);
+            }
+        }
+
+        async function saveBulkChanges() {
+            if (pendingUpdates.length === 0) {
+                alert('No changes to save');
+                return;
+            }
+            
+            if (!confirm(`Save ${pendingUpdates.length} changes for ${new Set(pendingUpdates.map(u => u.userId)).size} users?`)) {
+                return;
+            }
+            
+            try {
+                const response = await window.ISP_CONFIG.fetchAPI('/api/settings/update-bulk', {
+                    method: 'POST',
+                    body: JSON.stringify({ updates: pendingUpdates })
+                });
+                
+                if (response.success) {
+                    pendingUpdates = [];
+                    updatePendingCount();
+                    
+                    // Disable all save buttons
+                    document.querySelectorAll('#user-data-body button').forEach(btn => {
+                        btn.disabled = true;
+                        btn.classList.add('disabled:text-gray-400', 'disabled:cursor-not-allowed');
+                        btn.classList.remove('text-blue-600', 'hover:text-blue-900');
+                    });
+                    
+                    alert('All changes saved successfully!');
+                } else {
+                    alert('Some changes failed: ' + JSON.stringify(response.errors));
+                }
+            } catch (error) {
+                alert('Error saving changes: ' + error.message);
+            }
+        }
+
+        async function validateData() {
+            try {
+                const response = await window.ISP_CONFIG.fetchAPI('/api/settings/validate-data');
+                if (response.success) {
+                    displayValidationResults(response.validation);
+                } else {
+                    alert('Validation failed: ' + response.error);
+                }
+            } catch (error) {
+                alert('Error validating data: ' + error.message);
+            }
+        }
+
+        function displayValidationResults(validation) {
+            const container = document.getElementById('validation-results');
+            container.innerHTML = '';
+            container.classList.remove('hidden');
+            
+            const summary = `
+                <div class="bg-blue-50 p-4 rounded-lg mb-4">
+                    <h3 class="font-bold text-lg text-blue-800">Validation Summary</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
+                        <div class="bg-white p-3 rounded shadow">
+                            <div class="text-2xl font-bold text-blue-600">${validation.totalUsers}</div>
+                            <div class="text-sm text-gray-600">Total Users</div>
+                        </div>
+                        <div class="bg-white p-3 rounded shadow">
+                            <div class="text-2xl font-bold ${validation.usersWithErrors > 0 ? 'text-red-600' : 'text-green-600'}">${validation.usersWithErrors}</div>
+                            <div class="text-sm text-gray-600">Users with Errors</div>
+                        </div>
+                        <div class="bg-white p-3 rounded shadow">
+                            <div class="text-2xl font-bold text-yellow-600">${validation.summary.missingPhone}</div>
+                            <div class="text-sm text-gray-600">Missing Phone</div>
+                        </div>
+                        <div class="bg-white p-3 rounded shadow">
+                            <div class="text-2xl font-bold text-yellow-600">${validation.summary.missingDueDate}</div>
+                            <div class="text-sm text-gray-600">Missing Due Date</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            let errorsTable = '';
+            if (validation.usersWithErrors > 0) {
+                errorsTable = `
+                    <div class="bg-red-50 p-4 rounded-lg">
+                        <h3 class="font-bold text-lg text-red-800">Users with Errors (${validation.usersWithErrors})</h3>
+                        <div class="overflow-x-auto mt-2">
+                            <table class="min-w-full divide-y divide-red-200">
+                                <thead>
+                                    <tr>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-red-700 uppercase">Username</th>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-red-700 uppercase">Name</th>
+                                        <th class="px-4 py-2 text-left text-xs font-medium text-red-700 uppercase">Errors</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${validation.results.filter(r => r.hasErrors).map(r => `
+                                        <tr class="hover:bg-red-100">
+                                            <td class="px-4 py-2 text-sm font-medium text-gray-900">${escapeHtml(r.pppoe_username)}</td>
+                                            <td class="px-4 py-2 text-sm text-gray-700">${escapeHtml(r.name)}</td>
+                                            <td class="px-4 py-2 text-sm text-red-600">
+                                                <ul class="list-disc pl-5">
+                                                    ${r.errors.map(err => `<li>${escapeHtml(err)}</li>`).join('')}
+                                                </ul>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            } else {
+                errorsTable = `
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <h3 class="font-bold text-lg text-green-800">✅ All data is valid!</h3>
+                        <p class="text-green-700">No validation errors found.</p>
+                    </div>
+                `;
+            }
+            
+            container.innerHTML = summary + errorsTable;
+        }
+
+        function showBulkEdit() {
+            // For now, just load user data if not already loaded
+            if (userData.length === 0) {
+                loadUserData();
+            } else {
+                document.getElementById('data-table-container').classList.remove('hidden');
+            }
+        }
+
+        function hideDataTable() {
+            document.getElementById('data-table-container').classList.add('hidden');
+            document.getElementById('validation-results').classList.add('hidden');
+        }
+
+        function fixMissingData() {
+            if (!confirm('This will set default due dates (10th of next month) for users without due dates. Continue?')) {
+                return;
+            }
+            
+            // Calculate default due date (10th of next month)
+            const now = new Date();
+            const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 10);
+            const defaultDueDate = nextMonth.toISOString().split('T')[0];
+            
+            const updates = [];
+            userData.forEach(user => {
+                if (!user.due_date) {
+                    updates.push({
+                        userId: user.id,
+                        field: 'due_date',
+                        value: defaultDueDate
+                    });
+                }
+                if (!user.phone_number && !user.phone) {
+                    // Can't guess phone number, skip
+                }
+            });
+            
+            if (updates.length === 0) {
+                alert('No missing data to fix');
+                return;
+            }
+            
+            // Send updates
+            window.ISP_CONFIG.fetchAPI('/api/settings/update-bulk', {
+                method: 'POST',
+                body: JSON.stringify({ updates })
+            }).then(response => {
+                if (response.success) {
+                    alert(`Fixed ${updates.length} missing due dates`);
+                    loadUserData(); // Refresh
+                } else {
+                    alert('Failed to fix data: ' + JSON.stringify(response.errors));
+                }
+            }).catch(error => {
+                alert('Error fixing data: ' + error.message);
+            });
+        }
+    </script>
+</body>
+</html>

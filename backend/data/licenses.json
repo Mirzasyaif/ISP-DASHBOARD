@@ -1,0 +1,30 @@
+[
+  {
+    "licenseKey": "LIC-EDCB-C543-382A-DDFA",
+    "customerName": "Test Customer",
+    "customerEmail": "test@example.com",
+    "tier": "basic",
+    "maxUsers": 100,
+    "issuedAt": "2026-02-06T11:19:09.561Z",
+    "expiresAt": "2027-02-06T11:19:09.561Z",
+    "isActive": true,
+    "isTrial": false,
+    "activationDate": "2026-02-06T11:19:09.564Z",
+    "lastValidated": "2026-02-13T05:49:52.149Z",
+    "validationCount": 11
+  },
+  {
+    "licenseKey": "LIC-53AD-9224-1081-B656",
+    "customerName": "Trial Customer",
+    "customerEmail": "trial@example.com",
+    "tier": "trial",
+    "maxUsers": 50,
+    "issuedAt": "2026-02-06T11:19:09.600Z",
+    "expiresAt": "2026-03-08T11:19:09.600Z",
+    "isActive": true,
+    "isTrial": true,
+    "activationDate": null,
+    "lastValidated": null,
+    "validationCount": 0
+  }
+]

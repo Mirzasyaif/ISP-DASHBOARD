@@ -1,0 +1,482 @@
+{
+  "users": [
+    {
+      "pppoe_username": "RYUJIE",
+      "plan": "10Mbps",
+      "id": "1770220599044",
+      "created_at": "2026-02-04T15:56:39.044Z",
+      "status": "active",
+      "last_paid_month": "2026-02"
+    },
+    {
+      "pppoe_username": "RUMAH",
+      "plan": "10Mbps",
+      "id": "1770220599121",
+      "created_at": "2026-02-04T15:56:39.121Z",
+      "status": "active",
+      "last_paid_month": "2026-02"
+    },
+    {
+      "pppoe_username": "YUSRON",
+      "plan": "10Mbps",
+      "id": "1770220599153",
+      "created_at": "2026-02-04T15:56:39.153Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "INDRA-BAWAH",
+      "plan": "10Mbps",
+      "id": "1770220599235",
+      "created_at": "2026-02-04T15:56:39.235Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "SUATMAJI",
+      "plan": "10Mbps",
+      "id": "1770220599323",
+      "created_at": "2026-02-04T15:56:39.323Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "NUR",
+      "plan": "10Mbps",
+      "id": "1770220599374",
+      "created_at": "2026-02-04T15:56:39.374Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "SUGIARTI",
+      "plan": "10Mbps",
+      "id": "1770220599415",
+      "created_at": "2026-02-04T15:56:39.415Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "RATNA",
+      "plan": "10Mbps",
+      "id": "1770220599449",
+      "created_at": "2026-02-04T15:56:39.449Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "SISIL",
+      "plan": "10Mbps",
+      "id": "1770220599519",
+      "created_at": "2026-02-04T15:56:39.519Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "ANIN",
+      "plan": "10Mbps",
+      "id": "1770220599554",
+      "created_at": "2026-02-04T15:56:39.554Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "TOFA",
+      "plan": "10Mbps",
+      "id": "1770220599584",
+      "created_at": "2026-02-04T15:56:39.584Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "ASIA",
+      "plan": "10Mbps",
+      "id": "1770220599618",
+      "created_at": "2026-02-04T15:56:39.618Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "AGIL",
+      "plan": "10Mbps",
+      "id": "1770220599640",
+      "created_at": "2026-02-04T15:56:39.640Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "CEPI",
+      "plan": "10Mbps",
+      "id": "1770220599667",
+      "created_at": "2026-02-04T15:56:39.667Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "RINI",
+      "plan": "10Mbps",
+      "id": "1770220599695",
+      "created_at": "2026-02-04T15:56:39.695Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "IRWAN",
+      "plan": "10Mbps",
+      "id": "1770220599719",
+      "created_at": "2026-02-04T15:56:39.719Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "ABDILLAH",
+      "plan": "10Mbps",
+      "id": "1770220599737",
+      "created_at": "2026-02-04T15:56:39.737Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "KONI",
+      "plan": "10Mbps",
+      "id": "1770220599755",
+      "created_at": "2026-02-04T15:56:39.755Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "AGUS",
+      "plan": "10Mbps",
+      "id": "1770220599782",
+      "created_at": "2026-02-04T15:56:39.782Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "BINTANG",
+      "plan": "10Mbps",
+      "id": "1770220599806",
+      "created_at": "2026-02-04T15:56:39.806Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "YOZ",
+      "plan": "10Mbps",
+      "id": "1770220599836",
+      "created_at": "2026-02-04T15:56:39.836Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "ERFAN",
+      "plan": "10Mbps",
+      "id": "1770220599867",
+      "created_at": "2026-02-04T15:56:39.867Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "KARNO",
+      "plan": "10Mbps",
+      "id": "1770220599902",
+      "created_at": "2026-02-04T15:56:39.902Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "YUNUS",
+      "plan": "10Mbps",
+      "id": "1770220599943",
+      "created_at": "2026-02-04T15:56:39.943Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "WAWAN",
+      "plan": "10Mbps",
+      "id": "1770220599976",
+      "created_at": "2026-02-04T15:56:39.976Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "BAYU-YUNUS",
+      "plan": "10Mbps",
+      "id": "1770220600012",
+      "created_at": "2026-02-04T15:56:40.012Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "BIBI",
+      "plan": "10Mbps",
+      "id": "1770220600056",
+      "created_at": "2026-02-04T15:56:40.056Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "INDRA-ATAS",
+      "plan": "10Mbps",
+      "id": "1770220600099",
+      "created_at": "2026-02-04T15:56:40.099Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "EKO",
+      "plan": "10Mbps",
+      "id": "1770220600156",
+      "created_at": "2026-02-04T15:56:40.156Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "CANDRA",
+      "plan": "10Mbps",
+      "id": "1770220600193",
+      "created_at": "2026-02-04T15:56:40.193Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "ARIN",
+      "plan": "10Mbps",
+      "id": "1770220600225",
+      "created_at": "2026-02-04T15:56:40.225Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "INDRA-ADIWIJAYA",
+      "plan": "10Mbps",
+      "id": "1770220600254",
+      "created_at": "2026-02-04T15:56:40.254Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "SAPTA",
+      "plan": "10Mbps",
+      "id": "1770220600281",
+      "created_at": "2026-02-04T15:56:40.281Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "WIN-HADI",
+      "plan": "10Mbps",
+      "id": "1770220600309",
+      "created_at": "2026-02-04T15:56:40.309Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "AJIB",
+      "plan": "10Mbps",
+      "id": "1770220600340",
+      "created_at": "2026-02-04T15:56:40.340Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "ANTON",
+      "plan": "10Mbps",
+      "id": "1770220600370",
+      "created_at": "2026-02-04T15:56:40.370Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "TIN-HADI",
+      "plan": "10Mbps",
+      "id": "1770220600401",
+      "created_at": "2026-02-04T15:56:40.401Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "HALIM",
+      "plan": "10Mbps",
+      "id": "1770220600436",
+      "created_at": "2026-02-04T15:56:40.436Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "INDAH-ADIWIJAYA",
+      "plan": "10Mbps",
+      "id": "1770220600506",
+      "created_at": "2026-02-04T15:56:40.506Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "SARMAN",
+      "plan": "10Mbps",
+      "id": "1770220600535",
+      "created_at": "2026-02-04T15:56:40.535Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "HOLIL",
+      "plan": "10Mbps",
+      "id": "1770220600614",
+      "created_at": "2026-02-04T15:56:40.614Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "LIHIN",
+      "plan": "10Mbps",
+      "id": "1770220600638",
+      "created_at": "2026-02-04T15:56:40.638Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "RIO-PASAR",
+      "plan": "10Mbps",
+      "id": "1770220601009",
+      "created_at": "2026-02-04T15:56:41.009Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "UUL",
+      "plan": "10Mbps",
+      "id": "1770220601113",
+      "created_at": "2026-02-04T15:56:41.113Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "MAI",
+      "plan": "10Mbps",
+      "id": "1770220601147",
+      "created_at": "2026-02-04T15:56:41.147Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "DANI",
+      "plan": "10Mbps",
+      "id": "1770220601208",
+      "created_at": "2026-02-04T15:56:41.208Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "BAGUS",
+      "plan": "10Mbps",
+      "id": "1770220601275",
+      "created_at": "2026-02-04T15:56:41.275Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "SAIFUL-RW2",
+      "plan": "10Mbps",
+      "id": "1770220601343",
+      "created_at": "2026-02-04T15:56:41.343Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "YOYOK",
+      "plan": "10Mbps",
+      "id": "1770220601407",
+      "created_at": "2026-02-04T15:56:41.407Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "IPUNG",
+      "plan": "10Mbps",
+      "id": "1770220601504",
+      "created_at": "2026-02-04T15:56:41.504Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "FENDIK",
+      "plan": "10Mbps",
+      "id": "1770220601548",
+      "created_at": "2026-02-04T15:56:41.548Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "BAYU",
+      "plan": "10Mbps",
+      "id": "1770220601631",
+      "created_at": "2026-02-04T15:56:41.631Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "ANDRE",
+      "plan": "10Mbps",
+      "id": "1770220601679",
+      "created_at": "2026-02-04T15:56:41.679Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "PONIDI",
+      "plan": "10Mbps",
+      "id": "1770220601705",
+      "created_at": "2026-02-04T15:56:41.705Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "WIWID",
+      "plan": "10Mbps",
+      "id": "1770220601735",
+      "created_at": "2026-02-04T15:56:41.735Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "TIKNO",
+      "plan": "10Mbps",
+      "id": "1770220601809",
+      "created_at": "2026-02-04T15:56:41.809Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "AGUS-HOLIL",
+      "plan": "10Mbps",
+      "id": "1770220601919",
+      "created_at": "2026-02-04T15:56:41.919Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "MASSIS",
+      "plan": "10Mbps",
+      "id": "1770220602010",
+      "created_at": "2026-02-04T15:56:42.010Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "SUWITO",
+      "plan": "10Mbps",
+      "id": "1770220602036",
+      "created_at": "2026-02-04T15:56:42.036Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "CEK",
+      "plan": "10Mbps",
+      "id": "1770220602143",
+      "created_at": "2026-02-04T15:56:42.143Z",
+      "status": "active",
+      "last_paid_month": "2026-02"
+    },
+    {
+      "pppoe_username": "MARIYAM",
+      "plan": "10Mbps",
+      "id": "1770220602247",
+      "created_at": "2026-02-04T15:56:42.247Z",
+      "status": "active"
+    },
+    {
+      "pppoe_username": "admin'; DROP TABLE users;--",
+      "full_name": "Test",
+      "plan": "10Mbps",
+      "id": "1770264734849",
+      "created_at": "2026-02-05T04:12:14.849Z",
+      "status": "active",
+      "last_paid_month": null
+    }
+  ],
+  "payments": [
+    {
+      "id": "1770227326106",
+      "user_id": "1770220602143",
+      "month_year": "2026-02",
+      "amount": 0,
+      "status": "paid",
+      "paid_at": "2026-02-05T01:47:36.399Z",
+      "payment_method": "telegram"
+    },
+    {
+      "id": "1770256056445",
+      "user_id": "1770220599121",
+      "month_year": "2026-02",
+      "amount": 0,
+      "status": "paid",
+      "paid_at": "2026-02-05T01:47:36.445Z",
+      "payment_method": "telegram"
+    },
+    {
+      "id": "1770272528392",
+      "user_id": "1770220599044",
+      "month_year": "2026-02",
+      "amount": 0,
+      "status": "paid",
+      "paid_at": "2026-02-05T06:22:08.392Z",
+      "payment_method": "telegram"
+    }
+  ],
+  "config": {
+    "setup_completed": true,
+    "mikrotik_ip": "192.168.1.1",
+    "mikrotik_user": "admin",
+    "mikrotik_pass": "78951asdw",
+    "mikrotik_port": "8728",
+    "telegram_token": "7725846660:AAFlszZiryDD604WuuFCFBweHlc7Q5_tw5s",
+    "telegram_admin_id": "Mirzasyaif",
+    "port": "3000"
+  }
+}

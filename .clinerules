@@ -1,0 +1,23 @@
+# CLINE RULES & BEHAVIORAL GUIDELINES
+
+## 1. ANTI-LOOPING PROTOCOL (CRITICAL)
+- **Stop at 3:** If a command or fix fails 3 times in a row, YOU MUST STOP. Do not try the same fix a 4th time.
+- **Pause & Ask:** Instead of retrying blindly, analyze the error output, explain the potential cause to the user, and ask for guidance or permission to try a radically different approach.
+- **Read Before Write:** Never overwrite a file without reading its current content first. This prevents destroying existing code which causes cascading errors.
+
+## 2. PROJECT CONTEXT & MASTERPLAN
+- **Source of Truth:** Always refer to `MASTERPLAN.md` in the root directory. Do not deviate from the tech stack defined there (FastAPI, React, PostgreSQL, Tailwind) without user permission.
+- **Phase-by-Phase:** Only work on the current active phase. Do not implement features from Phase 4 if we are still in Phase 1.
+
+## 3. ENVIRONMENT & PERMISSIONS
+- **No Sudo for Pip:** Never use `sudo pip install`. Always create and activate a Python virtual environment (`venv`) before installing libraries.
+- **Sudo Usage:** If you need `sudo` for system packages (apt/docker), ask the user first or assume the user has passwordless sudo configured. If permission is denied, STOP and report it.
+- **Docker:** If `docker-compose` fails, check if the daemon is running first. Do not repeatedly try to `up` containers if the port is blocked.
+
+## 4. CODING STANDARDS
+- **Clean Code:** Always add docstrings to Python functions and comments for complex logic.
+- **Modular:** Keep the FastAPI structure modular (routers, services, schemas). Do not dump everything into `main.py`.
+- **UI/UX:** For Frontend, stick to "Wiku Dashboard" style (Clean, White/Blue theme, Tailwind CSS) as requested.
+
+## 5. MEMORY MANAGEMENT
+- **Context Limit:** If the conversation gets too long, summarize what has been done and what is pending in a `progress.md` file, then suggest the user to start a new chat window to save token costs and avoid confusion.

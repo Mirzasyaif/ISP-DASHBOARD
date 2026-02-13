@@ -1,0 +1,11 @@
+# Abaikan folder library yang berat
+backend/node_modules/
+backend/package-lock.json
+
+# Abaikan database user (biar tidak baca data pelanggan tiap chat)
+backend/data/db.json
+
+# Abaikan log error yang panjang
+*.log
+.DS_Store
+

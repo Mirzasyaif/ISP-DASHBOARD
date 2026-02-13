@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>API Test Dashboard</h1>
+    <div id="stats"></div>
+    <div id="pppoe"></div>
+    <div id="financial"></div>
+    
+    <script>
+        const API_KEY = 'isp_dashboard_api_key_2026';
+        const BASE_URL = 'http://localhost:3002';
+        
+        async function testAPI() {
+            console.log('Testing API...');
+            
+            // Test 1: Health check
+            try {
+                const health = await fetch(`${BASE_URL}/health`);
+                console.log('Health:', await health.json());
+            } catch (e) {
+                console.error('Health check failed:', e);
+            }
+            
+            // Test 2: Stats
+            try {
+                const stats = await fetch(`${BASE_URL}/api/stats`, {
+                    headers: { 'X-API-Key': API_KEY }
+                });
+                const statsData = await stats.json();
+                console.log('Stats:', statsData);
+                document.getElementById('stats').innerHTML = 
+                    `<h2>Stats</h2>
+                     <p>Total Users: ${statsData.totalUsers}</p>
+                     <p>Paid This Month: ${statsData.paidThisMonth}</p>
+                     <p>Pending: ${statsData.pendingPayments}</p>`;
+            } catch (e) {
+                console.error('Stats failed:', e);
+            }
+            
+            // Test 3: PPPoE Active
+            try {
+                const pppoe = await fetch(`${BASE_URL}/api/mikrotik/pppoe/active`, {
+                    headers: { 'X-API-Key': API_KEY }
+                });
+                const pppoeData = await pppoe.json();
+                console.log('PPPoE Active:', pppoeData.length);
+                document.getElementById('pppoe').innerHTML = 
+                    `<h2>PPPoE Active (${pppoeData.length})</h2>
+                     <ul>
+                        ${pppoeData.slice(0, 5).map(u => `<li>${u.name} - ${u.address}</li>`).join('')}
+                     </ul>`;
+            } catch (e) {
+                console.error('PPPoE failed:', e);
+            }
+            
+            // Test 4: Financial Dashboard
+            try {
+                const financial = await fetch(`${BASE_URL}/api/financial/dashboard`, {
+                    headers: { 'X-API-Key': API_KEY }
+                });
+                const financialData = await financial.json();
+                console.log('Financial:', financialData);
+                document.getElementById('financial').innerHTML = 
+                    `<h2>Financial</h2>
+                     <p>Monthly Revenue: ${financialData.thisMonthRevenue}</p>
+                     <p>Net Profit: ${financialData.netProfit}</p>
+                     <p>Outstanding: ${financialData.outstanding}</p>`;
+            } catch (e) {
+                console.error('Financial failed:', e);
+            }
+        }
+        
+        testAPI();
+    </script>
+</body>
+</html>

@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Test</title>
+    <link rel="stylesheet" href="assets/css/output.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-gray-50">
+    <h1 class="text-2xl font-bold mb-4">Dashboard Test</h1>
+    
+    <!-- Connection Status -->
+    <div id="connection-status" class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+        <p class="text-sm">Testing connections...</p>
+    </div>
+    
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-gray-500 text-sm">Total Users</h3>
+            <p id="total-users" class="text-4xl font-bold text-blue-600">...</p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-gray-500 text-sm">Paid This Month</h3>
+            <p id="paid-users" class="text-4xl font-bold text-green-600">...</p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-gray-500 text-sm">Pending Payments</h3>
+            <p id="pending-users" class="text-4xl font-bold text-red-600">...</p>
+        </div>
+        <div class="bg-white p-6 rounded-lg shadow">
+            <h3 class="text-gray-500 text-sm">Mikrotik Status</h3>
+            <p id="mikrotik-status" class="text-4xl font-bold text-purple-600">...</p>
+        </div>
+    </div>
+    
+    <!-- Financial Overview -->
+    <div class="bg-gradient-to-r from-blue-50 to-purple-50 p-6 rounded-lg shadow mb-6 border border-blue-100">
+        <h3 class="text-xl font-bold mb-4">Financial Overview</h3>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="bg-white p-4 rounded-lg shadow-sm border">
+                <div class="text-gray-500 text-sm">Monthly Revenue</div>
+                <p id="monthly-revenue" class="text-2xl font-bold text-blue-600">Rp 0</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow-sm border">
+                <div class="text-gray-500 text-sm">Net Profit</div>
+                <p id="net-profit" class="text-2xl font-bold text-green-600">Rp 0</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow-sm border">
+                <div class="text-gray-500 text-sm">Cash Flow</div>
+                <p id="cash-flow" class="text-2xl font-bold text-purple-600">Rp 0</p>
+            </div>
+            <div class="bg-white p-4 rounded-lg shadow-sm border">
+                <div class="text-gray-500 text-sm">Outstanding</div>
+                <p id="outstanding" class="text-2xl font-bold text-yellow-600">Rp 0</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- PPPoE Users Table -->
+    <div class="bg-white p-6 rounded-lg shadow">
+        <h3 class="text-xl font-bold mb-4">Live PPPoE Users</h3>
+        <div class="overflow-x-auto">
+            <table class="min-w-full">
+                <thead>
+                    <tr class="bg-gray-100">
+                        <th class="py-2 px-4 text-left">Username</th>
+                        <th class="py-2 px-4 text-left">IP Address</th>
+                        <th class="py-2 px-4 text-left">Status</th>
+                        <th class="py-2 px-4 text-left">Uptime</th>
+                    </tr>
+                </thead>
+                <tbody id="pppoe-table">
+                    <tr><td colspan="4" class="py-4 text-center">Loading...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <script type="module">
+        import { getElement, formatRupiah } from './assets/js/modules/utils.js';
+        import { fetchAPI } from './assets/js/modules/api.js';
+        
+        console.log('Dashboard test starting...');
+        
+        async function loadDashboardData() {
+            try {
+                // Test API connection
+                const health = await fetchAPI('/health');
+                console.log('Health check:', health);
+                updateConnectionStatus('API connected successfully', 'success');
+                
+                // Test Mikrotik connection
+                const testResult = await fetchAPI('/api/mikrotik/test');
+                console.log('Mikrotik test:', testResult);
+                updateConnectionStatus(testResult.success ? 'Mikrotik connected successfully' : 'Mikrotik connection failed',
+                                     testResult.success ? 'success' : 'error');
+                
+                // Load stats
+                const stats = await fetchAPI('/api/stats');
+                console.log('Stats:', stats);
+                
+                const totalUsersEl = getElement('total-users');
+                const paidUsersEl = getElement('paid-users');
+                const pendingUsersEl = getElement('pending-users');
+                const mikrotikStatusEl = getElement('mikrotik-status');
+                
+                if (totalUsersEl) totalUsersEl.textContent = stats.totalUsers;
+                if (paidUsersEl) paidUsersEl.textContent = stats.paidThisMonth;
+                if (pendingUsersEl) pendingUsersEl.textContent = stats.pendingPayments;
+                if (mikrotikStatusEl) mikrotikStatusEl.textContent = '✅';
+                
+                // Load financial data
+                const financialData = await fetchAPI('/api/financial/dashboard');
+                console.log('Financial data:', financialData);
+                
+                const monthlyRevenueEl = getElement('monthly-revenue');
+                const netProfitEl = getElement('net-profit');
+                const cashFlowEl = getElement('cash-flow');
+                const outstandingEl = getElement('outstanding');
+                
+                if (monthlyRevenueEl) monthlyRevenueEl.textContent = formatRupiah(financialData.thisMonthRevenue || 0);
+                if (netProfitEl) netProfitEl.textContent = formatRupiah(financialData.netProfit || 0);
+                if (cashFlowEl) cashFlowEl.textContent = formatRupiah(financialData.cashFlow || 0);
+                if (outstandingEl) outstandingEl.textContent = formatRupiah(financialData.outstanding || 0);
+                
+                // Load PPPoE users
+                const pppoe = await fetchAPI('/api/mikrotik/pppoe/active');
+                console.log('PPPoE users:', pppoe.length);
+                
+                const tableBody = getElement('pppoe-table');
+                if (tableBody) {
+                    tableBody.innerHTML = '';
+                    pppoe.slice(0, 10).forEach(user => {
+                        const row = document.createElement('tr');
+                        row.className = 'border-b hover:bg-gray-50';
+                        row.innerHTML = `
+                            <td class="py-2 px-4">${user.name}</td>
+                            <td class="py-2 px-4">${user.address || 'N/A'}</td>
+                            <td class="py-2 px-4"><span class="px-2 py-1 bg-green-100 text-green-800 rounded">Active</span></td>
+                            <td class="py-2 px-4">${user.uptime || 'N/A'}</td>
+                        `;
+                        tableBody.appendChild(row);
+                    });
+                }
+                
+                console.log('Dashboard test completed successfully');
+                
+            } catch (error) {
+                console.error('Dashboard test failed:', error);
+                updateConnectionStatus('Error: ' + error.message, 'error');
+            }
+        }
+        
+        function updateConnectionStatus(message, type) {
+            const statusEl = getElement('connection-status');
+            if (statusEl) {
+                statusEl.innerHTML = `<p class="text-sm">${message}</p>`;
+                statusEl.className = type === 'success' 
+                    ? 'bg-green-50 border-l-4 border-green-400 p-4 mb-4'
+                    : type === 'error'
+                    ? 'bg-red-50 border-l-4 border-red-400 p-4 mb-4'
+                    : 'bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4';
+            }
+        }
+        
+        // Start loading
+        loadDashboardData();
+    </script>
+</body>
+</html>

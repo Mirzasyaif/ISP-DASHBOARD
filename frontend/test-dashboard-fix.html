@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="backend-base" content="">
+    <title>Test Dashboard Fix</title>
+    <link rel="stylesheet" href="assets/css/output.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .status-active { background-color: #10B981; }
+        .status-inactive { background-color: #EF4444; }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <h1 class="text-2xl font-bold p-4">Test Dashboard Fix</h1>
+    <div class="p-4">
+        <p>Testing if JavaScript errors are fixed...</p>
+        <div id="status" class="mt-4 p-4 bg-blue-100 rounded">Loading...</div>
+        <div id="error" class="mt-4 p-4 bg-red-100 rounded hidden"></div>
+    </div>
+
+    <script src="assets/js/config.js"></script>
+    <script type="module" src="index.js"></script>
+    
+    <script>
+        // Simple test to check if dashboard.js loads without errors
+        window.addEventListener('load', function() {
+            const statusEl = document.getElementById('status');
+            const errorEl = document.getElementById('error');
+            
+            setTimeout(function() {
+                if (typeof window.loadDashboardData === 'function') {
+                    statusEl.textContent = '✅ dashboard.js loaded successfully';
+                    statusEl.className = 'mt-4 p-4 bg-green-100 rounded';
+                    
+                    // Try to load dashboard data
+                    try {
+                        console.log('Testing loadDashboardData...');
+                        window.loadDashboardData();
+                        statusEl.textContent += '\n✅ loadDashboardData called successfully';
+                    } catch (err) {
+                        errorEl.textContent = 'Error in loadDashboardData: ' + err.message;
+                        errorEl.classList.remove('hidden');
+                        console.error('Error:', err);
+                    }
+                } else {
+                    errorEl.textContent = '❌ dashboard.js not loaded properly';
+                    errorEl.classList.remove('hidden');
+                }
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

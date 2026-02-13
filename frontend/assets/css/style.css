@@ -1,0 +1,6 @@
+/* Minimal CSS for ISP Dashboard Financial Analytics */
+/* File exists to prevent MIME type error */
+body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+}
