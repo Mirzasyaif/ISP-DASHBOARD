@@ -1,5 +1,9 @@
 name: Build Android APK
 
+# To enable release builds:
+# Add a repository secret named KEYSTORE_BASE64 with your base64-encoded keystore file
+# in your GitHub repository settings (Settings → Secrets and variables → Actions)
+
 on:
   push:
     branches: [ main, master ]
@@ -52,14 +56,19 @@ jobs:
         retention-days: 30
         
     - name: Build Release APK (if secrets available)
-      if: ${{ secrets.KEYSTORE_BASE64 != '' }}
+      env:
+        KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
       run: |
-        echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/keystore.jks
-        cd android
-        ./gradlew assembleRelease --stacktrace
+        if [ -n "$KEYSTORE_BASE64" ]; then
+          echo "$KEYSTORE_BASE64" | base64 --decode > android/keystore.jks
+          cd android
+          ./gradlew assembleRelease --stacktrace
+        else
+          echo "Keystore secret not set, skipping release build"
+        fi
         
     - name: Upload Release APK
-      if: ${{ secrets.KEYSTORE_BASE64 != '' }}
+      if: hashFiles('android/app/build/outputs/apk/release/app-release.apk') != ''
       uses: actions/upload-artifact@v4
       with:
         name: release-apk
