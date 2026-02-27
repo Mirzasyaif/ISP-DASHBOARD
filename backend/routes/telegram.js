@@ -1,8 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const TelegramBot = require('node-telegram-bot-api');
-const db = require('../models/db');
-const dbSQLite = require('../models/db-sqlite');
+const db = require('../models/db-sqlite');
 const envConfig = require('../config/config').getConfig();
 
 let bot = null;
@@ -11,7 +10,7 @@ let adminId = null;
 // Get Telegram config from database (priority) or env
 function getTelegramConfig() {
     try {
-        const dbConfig = dbSQLite.getConfig();
+        const dbConfig = db.getConfig();
         return {
             telegram_token: dbConfig.telegram_token || envConfig.telegram_token || '',
             telegram_admin_id: dbConfig.telegram_admin_id || envConfig.telegram_admin_id || ''
@@ -40,7 +39,9 @@ function initializeBot(token, admin_id) {
         bot.setMyCommands([
             { command: 'start', description: 'Menu utama bot' },
             { command: 'status', description: 'Status dashboard' },
-            { command: 'userinfo', description: 'Informasi user' }
+            { command: 'userinfo', description: 'Informasi user' },
+            { command: 'sudahbayar', description: 'Cek user yang sudah bayar' },
+            { command: 'belumbayar', description: 'Cek user yang belum bayar' }
         ]).then(() => {
             console.log('✅ Command menu registered successfully');
         }).catch(err => {
@@ -55,7 +56,8 @@ function initializeBot(token, admin_id) {
                 `Available commands:\n` +
                 `/ping - Test bot responsiveness\n` +
                 `/bayar <username> - Mark user as paid\n` +
-                `/belumbayar - Check unpaid users\n` +
+                `/sudahbayar - Check users who have paid\n` +
+                `/belumbayar - Check users who haven't paid\n` +
                 `/status - Check dashboard status\n` +
                 `/userinfo <username> - Get user details`
             );
@@ -119,6 +121,52 @@ function initializeBot(token, admin_id) {
             }
         });
 
+        // Command: /sudahbayar - Check paid users
+        bot.onText(/\/sudahbayar/, async (msg) => {
+            const chatId = msg.chat.id;
+            
+            try {
+                const allUsers = await db.getAllUsers();
+                const currentMonthYear = new Date().toISOString().slice(0, 7);
+                
+                // Find users who have paid this month
+                const paidUsers = allUsers.filter(user => {
+                    return user.last_paid_month === currentMonthYear;
+                });
+                
+                if (paidUsers.length === 0) {
+                    bot.sendMessage(chatId, 
+                        `❌ No users have paid for this month (${currentMonthYear}).`
+                    );
+                    return;
+                }
+                
+                // Format message - show all users
+                let message = `✅ Users who have paid for ${currentMonthYear}:\n\n`;
+                
+                paidUsers.forEach((user, index) => {
+                    message += `${index + 1}. ${user.pppoe_username} (${user.name || 'N/A'})\n`;
+                });
+                
+                message += `\n\nTotal paid: ${paidUsers.length} users`;
+                
+                bot.sendMessage(chatId, message);
+                
+                // Send to admin if requested from non-admin
+                const isAdmin = msg.from.id.toString() === adminId;
+                if (!isAdmin && adminId && paidUsers.length > 0) {
+                    bot.sendMessage(adminId, 
+                        `✅ Paid users checked by @${msg.from.username || 'unknown'}\n` +
+                        `Total: ${paidUsers.length} users\n` +
+                        `Time: ${new Date().toLocaleString('id-ID', { timeZone: 'Asia/Jakarta' })}`
+                    );
+                }
+            } catch (error) {
+                console.error('Paid users error:', error);
+                bot.sendMessage(chatId, `❌ Error: ${error.message}`);
+            }
+        });
+
         // Command: /belumbayar - Check unpaid users
         bot.onText(/\/belumbayar/, async (msg) => {
             const chatId = msg.chat.id;
@@ -143,23 +191,15 @@ function initializeBot(token, admin_id) {
                     return;
                 }
                 
-                // Format message
+                // Format message - show all users
                 let message = `📋 Users who haven't paid for ${currentMonthYear}:\n\n`;
                 
-                // Display limited users to avoid message length issues
-                const displayLimit = 20;
-                const usersToDisplay = unpaidUsers.slice(0, displayLimit);
-                
-                usersToDisplay.forEach((user, index) => {
-                    message += `${index + 1}. ${user.pppoe_username} (${user.name})\n`;
+                unpaidUsers.forEach((user, index) => {
+                    message += `${index + 1}. ${user.pppoe_username} (${user.name || 'N/A'})\n`;
                     if (user.last_paid_month) {
                         message += `   Last paid: ${user.last_paid_month}\n`;
                     }
                 });
-                
-                if (unpaidUsers.length > displayLimit) {
-                    message += `\n... and ${unpaidUsers.length - displayLimit} more users.`;
-                }
                 
                 message += `\n\nTotal unpaid: ${unpaidUsers.length} users`;
                 

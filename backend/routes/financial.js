@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../models/db');
+const db = require('../models/db-sqlite');
 const { authenticateAPI } = require('../middleware/auth');
 
 // Get detailed financial report with time period

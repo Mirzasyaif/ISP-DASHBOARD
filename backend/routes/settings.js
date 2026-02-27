@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../models/db');
-const dbSQLite = require('../models/db-sqlite');
+const db = require('../models/db-sqlite');
 const { authenticateAPI } = require('../middleware/auth');
 
 // ==================== App Settings API ====================
@@ -9,7 +8,7 @@ const { authenticateAPI } = require('../middleware/auth');
 router.get('/app-settings', authenticateAPI, async (req, res) => {
     try {
         // Get settings from SQLite config table
-        const config = await dbSQLite.getConfig();
+        const config = await db.getConfig();
         
         res.json({ 
             success: true, 
@@ -69,7 +68,7 @@ router.post('/mikrotik', authenticateAPI, async (req, res) => {
         }
         
         // Save to SQLite config table
-        const updatedConfig = await dbSQLite.updateConfig(settingsToSave);
+        const updatedConfig = await db.updateConfig(settingsToSave);
         
         res.json({ 
             success: true, 
@@ -106,7 +105,7 @@ router.post('/telegram', authenticateAPI, async (req, res) => {
         }
         
         // Save to SQLite config table
-        const updatedConfig = await dbSQLite.updateConfig(settingsToSave);
+        const updatedConfig = await db.updateConfig(settingsToSave);
         
         res.json({ 
             success: true, 
@@ -127,7 +126,7 @@ router.post('/telegram', authenticateAPI, async (req, res) => {
 router.get('/whatsapp', authenticateAPI, async (req, res) => {
     try {
         // Get settings from SQLite config table
-        const config = await dbSQLite.getConfig();
+        const config = await db.getConfig();
         
         res.json({ 
             success: true, 
@@ -165,7 +164,7 @@ router.post('/whatsapp', authenticateAPI, async (req, res) => {
         }
         
         // Save to SQLite config table
-        const updatedConfig = await dbSQLite.updateConfig(settingsToSave);
+        const updatedConfig = await db.updateConfig(settingsToSave);
         
         res.json({ 
             success: true, 
@@ -186,7 +185,7 @@ router.post('/whatsapp', authenticateAPI, async (req, res) => {
 // Test Mikrotik connection with saved settings
 router.post('/mikrotik/test', authenticateAPI, async (req, res) => {
     try {
-        const config = await dbSQLite.getConfig();
+        const config = await db.getConfig();
         
         // Use saved settings or override with request body if provided
         const testConfig = {

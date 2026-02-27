@@ -2,9 +2,13 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#2563EB">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="ISP Dashboard">
     <title>ISP Management Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="assets/css/output.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         .status-active { background-color: #10B981; }
@@ -21,7 +25,7 @@
             animation: spin 1s linear infinite;
         }
         
-        /* Responsive table */
+        /* Mobile optimizations */
         @media (max-width: 768px) {
             .responsive-table {
                 display: block;
@@ -31,12 +35,36 @@
                 padding: 6px 8px;
                 font-size: 14px;
             }
+            /* Touch-friendly buttons */
+            button {
+                min-height: 44px;
+                min-width: 44px;
+            }
+            /* Better tap targets */
+            input, select {
+                min-height: 44px;
+            }
+            /* Prevent text selection on mobile */
+            .no-select {
+                -webkit-user-select: none;
+                -moz-user-select: none;
+                -ms-user-select: none;
+                user-select: none;
+            }
+        }
+        
+        /* Safe area for notched phones */
+        .safe-area-top {
+            padding-top: env(safe-area-inset-top);
+        }
+        .safe-area-bottom {
+            padding-bottom: env(safe-area-inset-bottom);
         }
     </style>
 </head>
 <body class="bg-gray-50">
     <!-- Navbar -->
-    <nav class="bg-blue-600 text-white p-4 shadow">
+    <nav class="bg-blue-600 text-white p-4 shadow safe-area-top">
         <div class="container mx-auto flex justify-between items-center">
             <div class="flex items-center space-x-4 md:space-x-6">
                 <h1 class="text-xl md:text-2xl font-bold">ISP Dashboard</h1>
@@ -60,175 +88,4 @@
         <!-- Mobile Menu -->
         <div id="mobile-menu" class="md:hidden hidden mt-4 bg-blue-700 rounded-lg">
             <div class="flex flex-col space-y-2 p-4">
-                <a href="index.html" class="px-3 py-2 rounded hover:bg-blue-800 transition">Dashboard</a>
-                <a href="secrets.html" class="px-3 py-2 rounded hover:bg-blue-800 transition">All Secrets</a>
-                <a href="settings.html" class="px-3 py-2 rounded hover:bg-blue-800 transition">Settings</a>
-            </div>
-        </div>
-    </nav>
-
-    <!-- Connection Status -->
-    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4">
-        <div class="container mx-auto">
-            <div class="flex">
-                <div class="flex-shrink-0">
-                    <svg class="h-5 w-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                    </svg>
-                </div>
-                <div class="ml-3">
-                    <p class="text-sm text-yellow-700" id="connection-status">
-                        Testing connections... <span id="debug-info"></span>
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Stats Cards -->
-    <div class="container mx-auto p-4 md:p-6">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
-            <div class="bg-white p-6 rounded-lg shadow card">
-                <h3 class="text-gray-500 text-sm">Total Users</h3>
-                <p id="total-users" class="text-4xl font-bold text-blue-600">0</p>
-            </div>
-            <div class="bg-white p-6 rounded-lg shadow card">
-                <h3 class="text-gray-500 text-sm">Paid This Month</h3>
-                <p id="paid-users" class="text-4xl font-bold text-green-600">0</p>
-            </div>
-            <div class="bg-white p-6 rounded-lg shadow card">
-                <h3 class="text-gray-500 text-sm">Pending Payments</h3>
-                <p id="pending-users" class="text-4xl font-bold text-red-600">0</p>
-            </div>
-            <div class="bg-white p-6 rounded-lg shadow card">
-                <h3 class="text-gray-500 text-sm">Mikrotik Status</h3>
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p id="mikrotik-status" class="text-4xl font-bold text-purple-600">...</p>
-                        <p id="mikrotik-online" class="text-sm text-gray-600 mt-1">Loading...</p>
-                        <p id="mikrotik-uptime" class="text-xs text-gray-500">Last check: --</p>
-                    </div>
-                    <div class="text-right">
-                        <button onclick="refreshMikrotikData()" class="px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm hover:bg-blue-200">
-                            ↻ Refresh
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Charts & Tables -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-            <div class="bg-white p-6 rounded-lg shadow">
-                <h3 class="text-xl font-bold mb-4">Payment Status Overview</h3>
-                <canvas id="paymentChart"></canvas>
-            </div>
-            <div class="bg-white p-6 rounded-lg shadow">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-xl font-bold">Live PPPoE Users</h3>
-                    <span class="px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm" id="active-count">0 active</span>
-                </div>
-                <div class="overflow-x-auto responsive-table">
-                    <table class="min-w-full">
-                        <thead>
-                            <tr class="bg-gray-100">
-                                <th class="py-2 px-4 text-left">Username</th>
-                                <th class="py-2 px-4 text-left">Status</th>
-                                <th class="py-2 px-4 text-left">Uptime</th>
-                                <th class="py-2 px-4 text-left">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="pppoe-table">
-                            <!-- Data will be populated via JavaScript -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- User Management Section -->
-        <div class="mt-6 md:mt-8 bg-white p-4 md:p-6 rounded-lg shadow">
-            <h3 class="text-xl font-bold mb-4">User Management</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                <div>
-                    <h4 class="font-semibold mb-2">Add New User</h4>
-                    <form id="add-user-form" class="space-y-3">
-                        <input type="text" name="pppoe_username" placeholder="PPPoE Username" class="border p-2 rounded w-full" required>
-                        <input type="text" name="full_name" placeholder="Full Name" class="border p-2 rounded w-full">
-                        <input type="text" name="phone" placeholder="Phone Number" class="border p-2 rounded w-full">
-                        <input type="text" name="plan" placeholder="Plan (e.g., 10Mbps)" class="border p-2 rounded w-full">
-                        <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Add User</button>
-                    </form>
-                </div>
-                <div>
-                    <h4 class="font-semibold mb-2">Quick Actions</h4>
-                    <div class="space-y-3">
-                        <button onclick="importFromMikrotik()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 w-full">
-                            Import Users from Mikrotik
-                        </button>
-                        <button onclick="checkMikrotikConnection()" class="bg-yellow-600 text-white px-4 py-2 rounded hover:bg-yellow-700 w-full">
-                            Test Mikrotik Connection
-                        </button>
-                    </div>
-                    <h4 class="font-semibold mb-2 mt-6">Bulk Operations</h4>
-                    <div class="space-y-3">
-                        <button onclick="disableUnpaidUsers()" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 w-full">
-                            Disable All Unpaid Users
-                        </button>
-                        <button onclick="enableAllUsers()" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 w-full">
-                            Enable All Users
-                        </button>
-                        <p class="text-xs text-gray-500 mt-2">
-                            • Disable All Unpaid: Disconnects active sessions and disables PPPoE secrets
-                            • Enable All Users: Enables all PPPoE secrets
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="assets/js/config.js"></script>
-    <script src="assets/js/dashboard.js"></script>
-    <script>
-        // Auto-load dashboard data when page is ready
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('Page loaded, starting dashboard...');
-            
-            // Check if required functions are available
-            if (typeof loadDashboardData !== 'function') {
-                console.error('loadDashboardData function not found');
-                return;
-            }
-            
-            if (typeof updateConnectionStatus !== 'function') {
-                console.error('updateConnectionStatus function not found');
-                return;
-            }
-            
-            // Mobile menu toggle
-            const mobileMenuButton = document.getElementById('mobile-menu-button');
-            const mobileMenu = document.getElementById('mobile-menu');
-            
-            if (mobileMenuButton && mobileMenu) {
-                mobileMenuButton.addEventListener('click', function() {
-                    mobileMenu.classList.toggle('hidden');
-                });
-            }
-            
-            // Small delay to ensure all scripts are loaded
-            setTimeout(function() {
-                loadDashboardData();
-            }, 500);
-        });
-        
-        // Auto-refresh every 60 seconds
-        setInterval(function() {
-            if (typeof loadDashboardData === 'function') {
-                console.log('Auto-refresh dashboard...');
-                loadDashboardData();
-            }
-        }, 60000);
-    </script>
-</body>
-</html>
+                <a href="index.html

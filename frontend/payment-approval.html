@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Approval Pembayaran - Mahapta Net</title>
+    <link rel="stylesheet" href="assets/css/output.css">
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <header class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-6">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center justify-between">
+                <div><h1 class="text-2xl font-bold">Mahapta Net</h1><p class="text-sm opacity-90">Approval Pembayaran</p></div>
+                <a href="index.html" class="text-white hover:text-gray-200">← Kembali ke Dashboard</a>
+            </div>
+        </div>
+    </header>
+    <main class="container mx-auto px-4 py-8">
+        <div class="max-w-6xl mx-auto">
+            <!-- Filter Tabs -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+                <div class="flex space-x-4">
+                    <button onclick="loadProofs('pending_verification')" id="tab-pending" class="px-6 py-2 rounded-lg bg-purple-600 text-white font-medium">Menunggu Verifikasi</button>
+                    <button onclick="loadProofs('approved')" id="tab-approved" class="px-6 py-2 rounded-lg bg-gray-200 text-gray-700 font-medium hover:bg-gray-300">Disetujui</button>
+                    <button onclick="loadProofs('rejected')" id="tab-rejected" class="px-6 py-2 rounded-lg bg-gray-200 text-gray-700 font-medium hover:bg-gray-300">Ditolak</button>
+                </div>
+            </div>
+
+            <!-- Loading -->
+            <div id="loading" class="text-center py-12">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+                <p class="mt-4 text-gray-600">Memuat data...</p>
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="hidden bg-white rounded-xl shadow-lg p-12 text-center">
+                <div class="text-6xl mb-4">📭</div>
+                <h3 class="text-xl font-semibold text-gray-700 mb-2">Tidak ada pembayaran</h3>
+                <p class="text-gray-500">Belum ada bukti transfer yang perlu diverifikasi</p>
+            </div>
+
+            <!-- Payment Proofs List -->
+            <div id="proofsList" class="space-y-6"></div>
+        </div>
+    </main>
+
+    <!-- Modal untuk lihat bukti -->
+    <div id="proofModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-auto">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold">Bukti Transfer</h3>
+                    <button onclick="closeModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+                </div>
+                <img id="modalImage" src="" alt="Bukti Transfer" class="w-full rounded-lg">
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3001/api/payment';
+        let currentStatus = 'pending_verification';
+
+        function formatRupiah(number) {
+            return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(number);
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('id-ID', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function updateTabs(status) {
+            currentStatus = status;
+            ['pending', 'approved', 'rejected'].forEach(tab => {
+                const btn = document.getElementById(`tab-${tab}`);
+                if (tab === status.replace('_verification', '')) {
+                    btn.className = 'px-6 py-2 rounded-lg bg-purple-600 text-white font-medium';
+                } else {
+                    btn.className = 'px-6 py-2 rounded-lg bg-gray-200 text-gray-700 font-medium hover:bg-gray-300';
+                }
+            });
+        }
+
+        async function loadProofs(status) {
+            updateTabs(status);
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('emptyState').classList.add('hidden');
+            document.getElementById('proofsList').innerHTML = '';
+
+            try {
+                const response = await fetch(`${API_BASE}/proofs/${status}`);
+                const data = await response.json();
+
+                document.getElementById('loading').classList.add('hidden');
+
+                if (!data.success || data.proofs.length === 0) {
+                    document.getElementById('emptyState').classList.remove('hidden');
+                    return;
+                }
+
+                const proofsList = document.getElementById('proofsList');
+                data.proofs.forEach(proof => {
+                    const card = document.createElement('div');
+                    card.className = 'bg-white rounded-xl shadow-lg p-6';
+                    card.innerHTML = `
+                        <div class="flex flex-col md:flex-row gap-6">
+                            <div class="md:w-1/3">
+                                <img src="http://localhost:3001/uploads/payment-proofs/${proof.proof_image}" 
+                                     alt="Bukti Transfer" 
+                                     class="w-full rounded-lg cursor-pointer hover:opacity-90"
+                                     onclick="viewProof('${proof.proof_image}')">
+                            </div>
+                            <div class="md:w-2/3">
+                                <div class="flex justify-between items-start mb-4">
+                                    <div>
+                                        <h3 class="text-lg font-bold">${proof.full_name || proof.username}</h3>
+                                        <p class="text-gray-600">@${proof.username}</p>
+                                    </div>
+                                    <span class="px-3 py-1 rounded-full text-sm font-medium ${
+                                        proof.status === 'pending_verification' ? 'bg-yellow-100 text-yellow-800' :
+                                        proof.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                        'bg-red-100 text-red-800'
+                                    }">
+                                        ${proof.status === 'pending_verification' ? 'Menunggu Verifikasi' :
+                                          proof.status === 'approved' ? 'Disetujui' : 'Ditolak'}
+                                    </span>
+                                </div>
+                                <div class="space-y-2 text-sm">
+                                    <p><strong>Periode:</strong> ${proof.month_year}</p>
+                                    <p><strong>Jumlah:</strong> <span class="text-xl font-bold text-purple-600">${formatRupiah(proof.amount)}</span></p>
+                                    <p><strong>Metode:</strong> ${proof.payment_method.toUpperCase()}</p>
+                                    <p><strong>Waktu Upload:</strong> ${formatDate(proof.created_at)}</p>
+                                    ${proof.verified_by ? `<p><strong>Diverifikasi oleh:</strong> ${proof.verified_by}</p>` : ''}
+                                    ${proof.verified_at ? `<p><strong>Waktu Verifikasi:</strong> ${formatDate(proof.verified_at)}</p>` : ''}
+                                </div>
+                                ${proof.status === 'pending_verification' ? `
+                                    <div class="mt-6 flex gap-3">
+                                        <button onclick="approveProof('${proof.id}')" 
+                                                class="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 font-medium">
+                                            ✅ Setujui
+                                        </button>
+                                        <button onclick="rejectProof('${proof.id}')" 
+                                                class="flex-1 bg-red-600 text-white py-2 rounded-lg hover:bg-red-700 font-medium">
+                                            ❌ Tolak
+                                        </button>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                    proofsList.appendChild(card);
+                });
+            } catch (error) {
+                console.error('Error loading proofs:', error);
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('emptyState').classList.remove('hidden');
+            }
+        }
+
+        function viewProof(imageName) {
+            document.getElementById('modalImage').src = `http://localhost:3001/uploads/payment-proofs/${imageName}`;
+            document.getElementById('proofModal').classList.remove('hidden');
+            document.getElementById('proofModal').classList.add('flex');
+        }
+
+        function closeModal() {
+            document.getElementById('proofModal').classList.add('hidden');
+            document.getElementById('proofModal').classList.remove('flex');
+        }
+
+        async function approveProof(proofId) {
+            if (!confirm('Apakah Anda yakin ingin menyetujui pembayaran ini?')) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/approve-proof/${proofId}`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('Pembayaran berhasil disetujui!');
+                    loadProofs(currentStatus);
+                } else {
+                    alert('Gagal menyetujui pembayaran: ' + data.message);
+                }
+            } catch (error) {
+                alert('Terjadi kesalahan. Silakan coba lagi.');
+            }
+        }
+
+        async function rejectProof(proofId) {
+            if (!confirm('Apakah Anda yakin ingin menolak pembayaran ini?')) return;
+
+            try {
+                const response = await fetch(`${API_BASE}/reject-proof/${proofId}`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    alert('Pembayaran berhasil ditolak!');
+                    loadProofs(currentStatus);
+                } else {
+                    alert('Gagal menolak pembayaran: ' + data.message);
+                }
+            } catch (error) {
+                alert('Terjadi kesalahan. Silakan coba lagi.');
+            }
+        }
+
+        // Load pending proofs on page load
+        loadProofs('pending_verification');
+    </script>
+</body>
+</html>

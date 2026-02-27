@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../models/db');
+const db = require('../models/db-sqlite');
 const { authenticateAPI } = require('../middleware/auth');
-const whatsappController = require('../controllers/whatsappController');
+const whatsappController = require('../controllers/whatsappGowaController');
 
 // Get all users with WhatsApp info
 router.get('/users', authenticateAPI, async (req, res) => {
@@ -263,45 +263,59 @@ router.post('/send-bulk-test', authenticateAPI, async (req, res) => {
 // Check WhatsApp service status
 router.get('/service-status', authenticateAPI, async (req, res) => {
     try {
-        // Cek apakah OpenClaw CLI tersedia
-        const { exec } = require('child_process');
-        const { promisify } = require('util');
-        const execAsync = promisify(exec);
+        const axios = require('axios');
+        const GOWA_API_URL = process.env.GOWA_API_URL || 'http://localhost:3000';
+        const GOWA_USERNAME = process.env.GOWA_USERNAME || '';
+        const GOWA_PASSWORD = process.env.GOWA_PASSWORD || '';
+        const GOWA_DEVICE_ID = process.env.GOWA_DEVICE_ID || 'Isp';
         
         let serviceStatus = {
-            openclaw_cli: false,
-            whatsapp_channel: false,
-            message: 'Checking service status...',
-            test_number: '+6281234567890' // dummy number for test
+            service: 'GOWA',
+            api_url: GOWA_API_URL,
+            device_id: GOWA_DEVICE_ID,
+            connected: false,
+            logged_in: false,
+            message: 'Checking GOWA service status...',
+            timestamp: new Date().toISOString()
         };
         
         try {
-            // Test OpenClaw CLI
-            const { stdout } = await execAsync('openclaw --version', { timeout: 5000 });
-            serviceStatus.openclaw_cli = true;
-            serviceStatus.openclaw_version = stdout.trim();
+            const headers = {
+                'Content-Type': 'application/json',
+                'X-Device-Id': GOWA_DEVICE_ID
+            };
             
-            // Test WhatsApp channel dengan dry-run (tidak benar-benar kirim)
-            // Karena tidak ada command status, kita test dengan dry-run send
-            const testCommand = `openclaw message send --channel whatsapp --target "${serviceStatus.test_number}" --message "WhatsApp Controller Test" --dry-run --json`;
-            
-            try {
-                const { stdout: whatsappOutput } = await execAsync(testCommand, { timeout: 5000 });
-                const result = JSON.parse(whatsappOutput);
-                serviceStatus.whatsapp_channel = !result.error;
-                serviceStatus.whatsapp_details = result;
-                serviceStatus.message = 'WhatsApp channel ready (dry-run test passed)';
-            } catch (dryRunError) {
-                // Dry-run gagal, coba check apakah WhatsApp channel terkonfigurasi
-                const { stdout: configCheck } = await execAsync('openclaw config get whatsapp', { timeout: 5000 });
-                const config = JSON.parse(configCheck);
-                serviceStatus.whatsapp_channel = Object.keys(config).length > 0;
-                serviceStatus.whatsapp_config = config;
-                serviceStatus.message = `WhatsApp channel ${serviceStatus.whatsapp_channel ? 'configured' : 'not configured'} (dry-run failed: ${dryRunError.message})`;
+            // Add Basic Auth if credentials are provided
+            if (GOWA_USERNAME && GOWA_PASSWORD) {
+                const auth = Buffer.from(`${GOWA_USERNAME}:${GOWA_PASSWORD}`).toString('base64');
+                headers['Authorization'] = `Basic ${auth}`;
             }
             
+            // Check device status
+            const response = await axios.get(
+                `${GOWA_API_URL}/devices/${GOWA_DEVICE_ID}/status`,
+                { headers, timeout: 5000 }
+            );
+            
+            if (response.data && response.data.code === 'SUCCESS') {
+                serviceStatus.connected = response.data.results.is_connected;
+                serviceStatus.logged_in = response.data.results.is_logged_in;
+                serviceStatus.message = serviceStatus.logged_in 
+                    ? 'GOWA service is ready and logged in'
+                    : 'GOWA service is connected but not logged in';
+            } else {
+                serviceStatus.message = 'GOWA service returned unexpected response';
+            }
         } catch (error) {
-            serviceStatus.message = `Service check failed: ${error.message}`;
+            if (error.code === 'ECONNREFUSED') {
+                serviceStatus.message = 'Cannot connect to GOWA API service';
+            } else if (error.code === 'ETIMEDOUT') {
+                serviceStatus.message = 'Timeout connecting to GOWA API';
+            } else if (error.response && error.response.status === 404) {
+                serviceStatus.message = 'Device not found in GOWA';
+            } else {
+                serviceStatus.message = `Error checking GOWA status: ${error.message}`;
+            }
         }
         
         res.json({ success: true, status: serviceStatus });

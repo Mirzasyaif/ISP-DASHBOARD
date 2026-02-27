@@ -3,18 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JS Test</title>
-    <script>
-        console.log('JS loaded');
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM loaded');
-            document.body.innerHTML = '<h1>JS Working!</h1>';
-        });
-    </script>
+    <title>Test JS</title>
 </head>
 <body>
-    <h1>Loading...</h1>
+    <h1>JavaScript Test</h1>
+    <div id="test">Test Content</div>
+    <script>
+        console.log('Test script loaded');
+        document.getElementById('test').textContent = 'Script working!';
+    </script>
 </body>
 </html>
-</task_progress>
-</write_to_file>

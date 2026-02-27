@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pembayaran Online - Mahapta Net</title>
+    <link rel="stylesheet" href="assets/css/output.css">
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <header class="bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-6">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center justify-between">
+                <div><h1 class="text-2xl font-bold">Mahapta Net</h1><p class="text-sm opacity-90">Portal Pembayaran Online</p></div>
+                <a href="index.html" class="text-white hover:text-gray-200">← Kembali</a>
+            </div>
+        </div>
+    </header>
+    <main class="container mx-auto px-4 py-8">
+        <div class="max-w-2xl mx-auto">
+            <div class="bg-white rounded-xl shadow-lg p-8 mb-6">
+                <h2 class="text-xl font-semibold mb-6">Cek Tagihan Anda</h2>
+                <form id="searchForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Username PPPoE</label>
+                        <input type="text" id="username" class="w-full px-4 py-3 border rounded-lg" placeholder="Masukkan username" required>
+                    </div>
+                    <button type="submit" id="searchBtn" class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 rounded-lg hover:opacity-90">Cek Tagihan</button>
+                </form>
+            </div>
+            <div id="billInfo" class="hidden bg-white rounded-xl shadow-lg p-8 mb-6">
+                <h3 class="text-lg font-semibold mb-4">Informasi Tagihan</h3>
+                <div id="billDetails"></div>
+                <div id="paymentSection" class="mt-6 hidden">
+                    <h4 class="font-medium mb-4">Metode Pembayaran</h4>
+                    <div class="border rounded-lg p-4 mb-4 bg-blue-50">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="font-semibold text-blue-800">BCA</p>
+                                <p class="text-2xl font-bold text-blue-900">3330190816</p>
+                                <p class="text-sm text-blue-700">a.n. Mirza Maulana</p>
+                            </div>
+                            <button onclick="copyToClipboard('3330190816')" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm">Salin</button>
+                        </div>
+                    </div>
+                    <div class="border rounded-lg p-4 mb-4 bg-purple-50">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="font-semibold text-purple-800">DANA</p>
+                                <p class="text-2xl font-bold text-purple-900">085236022073</p>
+                                <p class="text-sm text-purple-700">a.n. Mirza Maulana</p>
+                            </div>
+                            <button onclick="copyToClipboard('085236022073')" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 text-sm">Salin</button>
+                        </div>
+                    </div>
+                    <div class="mt-6 border-t pt-6">
+                        <h4 class="font-medium mb-4">Upload Bukti Transfer</h4>
+                        <form id="uploadProofForm" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Pilih Metode Pembayaran</label>
+                                <select id="paymentMethod" class="w-full px-4 py-3 border rounded-lg" required>
+                                    <option value="bca">BCA</option>
+                                    <option value="dana">DANA</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Upload Bukti Transfer</label>
+                                <input type="file" id="proofImage" accept="image/*" class="w-full px-4 py-3 border rounded-lg" required>
+                            </div>
+                            <button type="submit" id="uploadBtn" class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white py-3 rounded-lg hover:opacity-90">Upload Bukti Transfer</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <div id="statusMessage" class="hidden bg-white rounded-xl shadow-lg p-8 text-center"></div>
+        </div>
+    </main>
+    <script>
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Nomor rekening berhasil disalin!');
+            });
+        }
+    </script>
+    <script src="assets/js/payment.js"></script>
+</body>
+</html>

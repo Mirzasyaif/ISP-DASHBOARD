@@ -8,6 +8,8 @@ const envConfig = require('../config/config').getConfig();
 const dbSQLite = require('../models/db-sqlite');
 
 let mikrotik = null;
+let connectionRetries = 0;
+const MAX_RETRIES = 3;
 
 // Get Mikrotik config from database (priority) or env
 function getMikrotikConfig() {
@@ -30,7 +32,7 @@ function getMikrotikConfig() {
     }
 }
 
-// Connect to Mikrotik
+// Connect to Mikrotik with retry logic
 async function connectMikrotik() {
     const config = getMikrotikConfig();
     const { mikrotik_ip, mikrotik_user, mikrotik_pass, mikrotik_port } = config;
@@ -41,22 +43,66 @@ async function connectMikrotik() {
     
     console.log(`Connecting to Mikrotik at ${mikrotik_ip}:${mikrotik_port || 8728}...`);
     
-    mikrotik = new RouterOS({
-        host: mikrotik_ip,
-        user: mikrotik_user,
-        password: mikrotik_pass,
-        port: mikrotik_port || 8728,
-        timeout: 5000 // Reduce timeout to 5 seconds
-    });
+    // Retry logic
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        try {
+            mikrotik = new RouterOS({
+                host: mikrotik_ip,
+                user: mikrotik_user,
+                password: mikrotik_pass,
+                port: mikrotik_port || 8728,
+                timeout: 10000 // Increased timeout to 10 seconds
+            });
 
+            await mikrotik.connect();
+            console.log('Connected to Mikrotik successfully');
+            connectionRetries = 0; // Reset retry counter on success
+            return true;
+        } catch (error) {
+            console.error(`Mikrotik connection attempt ${attempt}/${MAX_RETRIES} failed:`, error.message);
+            mikrotik = null;
+            
+            if (attempt < MAX_RETRIES) {
+                // Wait before retry (exponential backoff)
+                const waitTime = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
+                console.log(`Retrying in ${waitTime}ms...`);
+                await new Promise(resolve => setTimeout(resolve, waitTime));
+            } else {
+                console.error('Max retries reached. Mikrotik connection failed.');
+                connectionRetries++;
+                return false;
+            }
+        }
+    }
+}
+
+// Helper function to execute Mikrotik command with retry
+async function executeMikrotikCommand(command, params = {}) {
+    if (!mikrotik) {
+        const connected = await connectMikrotik();
+        if (!connected) {
+            throw new Error('Failed to connect to Mikrotik');
+        }
+    }
+    
     try {
-        await mikrotik.connect();
-        console.log('Connected to Mikrotik');
-        return true;
+        const result = await mikrotik.write(command, params);
+        return result;
     } catch (error) {
-        console.error('Mikrotik connection failed:', error.message);
-        mikrotik = null;
-        return false;
+        console.error(`Mikrotik command failed: ${command}`, error.message);
+        
+        // Try to reconnect and retry once
+        if (error.message.includes('timeout') || error.message.includes('ETIMEDOUT') || error.message.includes('ECONNRESET')) {
+            console.log('Connection lost, attempting to reconnect...');
+            mikrotik = null;
+            const reconnected = await connectMikrotik();
+            if (reconnected) {
+                console.log('Reconnected, retrying command...');
+                return await mikrotik.write(command, params);
+            }
+        }
+        
+        throw error;
     }
 }
 

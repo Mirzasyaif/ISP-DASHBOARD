@@ -1,9 +1,11 @@
 const express = require('express');
 const router = express.Router();
 const TelegramBot = require('node-telegram-bot-api');
-const db = require('../models/db');
+const db = require('../models/db-sqlite');
 const config = require('../config/config').getConfig();
 const { parseRupiah, formatRupiah, validatePriceInput } = require('../utils/currencyParser');
+const { sendPaymentConfirmation } = require('../controllers/whatsappGowaController');
+const whatsappState = require('../utils/whatsappState');
 
 let bot = null;
 let adminId = null;
@@ -12,6 +14,30 @@ let adminId = null;
 const userPaymentStates = {};
 const userImportStates = {};
 const userExpenseStates = {};
+
+// Helper function to escape Markdown special characters
+function escapeMarkdown(text) {
+    if (!text) return '';
+    return text.toString()
+        .replace(/_/g, '\\_')
+        .replace(/\*/g, '\\*')
+        .replace(/\[/g, '\\[')
+        .replace(/\]/g, '\\]')
+        .replace(/\(/g, '\\(')
+        .replace(/\)/g, '\\)')
+        .replace(/~/g, '\\~')
+        .replace(/`/g, '\\`')
+        .replace(/>/g, '\\>')
+        .replace(/#/g, '\\#')
+        .replace(/\+/g, '\\+')
+        .replace(/-/g, '\\-')
+        .replace(/=/g, '\\=')
+        .replace(/\|/g, '\\|')
+        .replace(/\{/g, '\\{')
+        .replace(/\}/g, '\\}')
+        .replace(/\./g, '\\.')
+        .replace(/!/g, '\\!');
+}
 
 // Function to initialize bot with token and admin ID
 function initializeBot(token, admin_id) {
@@ -27,11 +53,17 @@ function initializeBot(token, admin_id) {
             { command: 'keuangan', description: 'Cek laporan pendapatan & profit' },
             { command: 'tagihan', description: 'List client yang belum bayar' },
             { command: 'bayar', description: 'Input pembayaran (Auto-Search)' },
+            { command: 'sudahbayar', description: 'List client yang sudah bayar' },
+            { command: 'belumbayar', description: 'List client yang belum bayar' },
+            { command: 'hapus_bayar', description: 'Hapus pembayaran yang salah input' },
             { command: 'import_clients', description: 'Import data massal' },
             { command: 'set_harga', description: 'Koreksi harga bulanan client' },
             { command: 'catat_keluar', description: 'Catat pengeluaran operasional' },
             { command: 'status', description: 'Status dashboard' },
-            { command: 'userinfo', description: 'Informasi user' }
+            { command: 'userinfo', description: 'Informasi user' },
+            { command: 'wa_on', description: 'Aktifkan notifikasi WhatsApp' },
+            { command: 'wa_off', description: 'Matikan notifikasi WhatsApp' },
+            { command: 'wa_status', description: 'Cek status WhatsApp' }
         ]).then(() => {
             console.log('✅ Command menu registered successfully');
         }).catch(err => {
@@ -360,9 +392,14 @@ bot.onText(/\/bayar (.+)/, async (msg, match) => {
                     return;
                 }
                 
+                const waStatus = whatsappState.isEnabled();
+                const waButtonText = waStatus ? '📱 WhatsApp: ON' : '📱 WhatsApp: OFF';
+                const waButtonCallback = waStatus ? 'action_wa_off' : 'action_wa_on';
+                
                 const keyboard = {
                     reply_markup: {
                         inline_keyboard: [
+                            [{ text: waButtonText, callback_data: waButtonCallback }],
                             [{ text: '📱 Test Notifikasi', callback_data: 'action_test_notif' }],
                             [{ text: '📊 Bot Status', callback_data: 'action_bot_status' }],
                             [{ text: '« Kembali', callback_data: 'menu_main' }]
@@ -371,7 +408,7 @@ bot.onText(/\/bayar (.+)/, async (msg, match) => {
                 };
                 
                 await bot.editMessageText(
-                    `⚙️ *Menu Settings*\n━━━━━━━━━━━━━━━━━━━━━━\n\n👑 Admin Mode: ✅\n🆔 Your ID: ${userId}\n\nPilih aksi yang diinginkan:`,
+                    `⚙️ *Menu Settings*\n━━━━━━━━━━━━━━━━━━━━━━\n\n👑 Admin Mode: ✅\n🆔 Your ID: ${userId}\n📱 WhatsApp: ${whatsappState.getStatusString()}\n\nPilih aksi yang diinginkan:`,
                     { chat_id: chatId, message_id: msgId, parse_mode: 'Markdown', ...keyboard }
                 );
             }
@@ -649,6 +686,64 @@ bot.onText(/\/bayar (.+)/, async (msg, match) => {
                 );
             }
             
+            else if (data === 'action_wa_on') {
+                if (!isAdmin) {
+                    await bot.answerCallbackQuery(query.id, { text: '⛔ Admin only', show_alert: true });
+                    return;
+                }
+                whatsappState.enable('telegram');
+                await bot.answerCallbackQuery(query.id, { text: '✅ WhatsApp diaktifkan', show_alert: true });
+                // Refresh the settings menu
+                const waStatus = whatsappState.isEnabled();
+                const waButtonText = waStatus ? '📱 WhatsApp: ON' : '📱 WhatsApp: OFF';
+                const waButtonCallback = waStatus ? 'action_wa_off' : 'action_wa_on';
+                
+                const keyboard = {
+                    reply_markup: {
+                        inline_keyboard: [
+                            [{ text: waButtonText, callback_data: waButtonCallback }],
+                            [{ text: '📱 Test Notifikasi', callback_data: 'action_test_notif' }],
+                            [{ text: '📊 Bot Status', callback_data: 'action_bot_status' }],
+                            [{ text: '« Kembali', callback_data: 'menu_main' }]
+                        ]
+                    }
+                };
+                
+                await bot.editMessageText(
+                    `⚙️ *Menu Settings*\n━━━━━━━━━━━━━━━━━━━━━━\n\n👑 Admin Mode: ✅\n🆔 Your ID: ${userId}\n📱 WhatsApp: ${whatsappState.getStatusString()}\n\nPilih aksi yang diinginkan:`,
+                    { chat_id: chatId, message_id: msgId, parse_mode: 'Markdown', ...keyboard }
+                );
+            }
+            
+            else if (data === 'action_wa_off') {
+                if (!isAdmin) {
+                    await bot.answerCallbackQuery(query.id, { text: '⛔ Admin only', show_alert: true });
+                    return;
+                }
+                whatsappState.disable('telegram');
+                await bot.answerCallbackQuery(query.id, { text: '❌ WhatsApp dimatikan', show_alert: true });
+                // Refresh the settings menu
+                const waStatus = whatsappState.isEnabled();
+                const waButtonText = waStatus ? '📱 WhatsApp: ON' : '📱 WhatsApp: OFF';
+                const waButtonCallback = waStatus ? 'action_wa_off' : 'action_wa_on';
+                
+                const keyboard = {
+                    reply_markup: {
+                        inline_keyboard: [
+                            [{ text: waButtonText, callback_data: waButtonCallback }],
+                            [{ text: '📱 Test Notifikasi', callback_data: 'action_test_notif' }],
+                            [{ text: '📊 Bot Status', callback_data: 'action_bot_status' }],
+                            [{ text: '« Kembali', callback_data: 'menu_main' }]
+                        ]
+                    }
+                };
+                
+                await bot.editMessageText(
+                    `⚙️ *Menu Settings*\n━━━━━━━━━━━━━━━━━━━━━━\n\n👑 Admin Mode: ✅\n🆔 Your ID: ${userId}\n📱 WhatsApp: ${whatsappState.getStatusString()}\n\nPilih aksi yang diinginkan:`,
+                    { chat_id: chatId, message_id: msgId, parse_mode: 'Markdown', ...keyboard }
+                );
+            }
+            
             // ==========================================
             // HELP SUB-MENUS
             // ==========================================
@@ -687,6 +782,7 @@ bot.onText(/\/bayar (.+)/, async (msg, match) => {
                     `/keuangan - Laporan keuangan\n` +
                     `/tagihan - List tagihan\n` +
                     `/bayar <nama> - Input bayar\n` +
+                    `/hapus_bayar <nama> [bulan] - Hapus pembayaran\n` +
                     `/set_harga <nama> <harga>\n` +
                     `/userinfo <nama> - Info client\n` +
                     `/status - Status dashboard\n` +
@@ -712,6 +808,29 @@ bot.onText(/\/bayar (.+)/, async (msg, match) => {
                     let replyText;
                     if (success) {
                         replyText = `✅ Pembayaran ${formattedAmount} berhasil diterima untuk ${username}.`;
+                        
+                        // Kirim notifikasi WhatsApp ke pelanggan
+                        try {
+                            const user = await db.getUserByUsername(username);
+                            if (user) {
+                                const monthYear = new Date().toISOString().slice(0, 7);
+                                const paymentData = {
+                                    amount: amount,
+                                    month_year: monthYear,
+                                    payment_date: new Date().toISOString()
+                                };
+                                
+                                const waSent = await sendPaymentConfirmation(user, paymentData);
+                                if (waSent) {
+                                    replyText += `\n📱 Notifikasi WhatsApp terkirim ke pelanggan.`;
+                                } else {
+                                    replyText += `\n⚠️ Gagal mengirim notifikasi WhatsApp (GOWA API tidak tersedia).`;
+                                }
+                            }
+                        } catch (waError) {
+                            console.error('WhatsApp notification error:', waError);
+                            replyText += `\n⚠️ Error mengirim notifikasi WhatsApp: ${waError.message}`;
+                        }
                         
                         const isAdminUser = query.from.id.toString() === adminId;
                         if (!isAdminUser && adminId) {
@@ -783,6 +902,37 @@ bot.onText(/\/bayar (.+)/, async (msg, match) => {
             else if (data === 'cancel_payment') {
                 delete userPaymentStates[chatId];
                 bot.sendMessage(chatId, '❌ Pembayaran dibatalkan.');
+            }
+            
+            // DELETE PAYMENT CALLBACKS
+            else if (data.startsWith('confirm_delete_payment:')) {
+                const [, username, monthYear] = data.split(':');
+                
+                try {
+                    const result = await db.deletePayment(username, monthYear);
+                    
+                    if (result.success) {
+                        await bot.editMessageText(
+                            `✅ ${result.message}`,
+                            { chat_id: chatId, message_id: msgId, reply_markup: {} }
+                        );
+                    } else {
+                        await bot.editMessageText(
+                            `❌ ${result.message}`,
+                            { chat_id: chatId, message_id: msgId, reply_markup: {} }
+                        );
+                    }
+                } catch (error) {
+                    console.error('Delete payment error:', error);
+                    await bot.editMessageText(
+                        `❌ Error: ${error.message}`,
+                        { chat_id: chatId, message_id: msgId, reply_markup: {} }
+                    );
+                }
+            }
+            
+            else if (data === 'cancel_delete_payment') {
+                bot.sendMessage(chatId, '❌ Penghapusan pembayaran dibatalkan.');
             }
         });
 
@@ -1049,6 +1199,18 @@ bot.onText(/\/bayar (.+)/, async (msg, match) => {
         });
 
         // ==========================================
+        // COMMAND: /sudahbayar
+        // ==========================================
+        bot.onText(/\/sudahbayar$/, async (msg) => {
+            const chatId = msg.chat.id;
+            bot.sendMessage(chatId, `🔎 Silakan ketik /sudahbayar untuk melihat daftar client yang sudah bayar.\nContoh: /sudahbayar`, { parse_mode: 'Markdown' });
+        });
+        bot.onText(/\/sudahbayar/, async (msg) => {
+            const chatId = msg.chat.id;
+            await handleSudahBayarCommand(chatId);
+        });
+
+        // ==========================================
         // COMMAND: /belumbayar
         // ==========================================
         bot.onText(/\/belumbayar$/, async (msg) => {
@@ -1187,6 +1349,144 @@ bot.onText(/\/bayar (.+)/, async (msg, match) => {
         });
 
         // ==========================================
+        // COMMAND: /wa_on - Enable WhatsApp
+        // ==========================================
+        bot.onText(/\/wa_on/, async (msg) => {
+            const chatId = msg.chat.id;
+            const isAdmin = msg.from.id.toString() === adminId;
+            
+            if (!isAdmin) {
+                bot.sendMessage(chatId, '❌ Hanya admin yang dapat mengaktifkan WhatsApp.');
+                return;
+            }
+            
+            whatsappState.enable('telegram');
+            bot.sendMessage(chatId, 
+                `✅ *WhatsApp Diaktifkan*\n━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+                `Notifikasi WhatsApp sekarang AKTIF.\n` +
+                `Semua pesan akan dikirim ke pelanggan.`,
+                { parse_mode: 'Markdown' }
+            );
+        });
+
+        // ==========================================
+        // COMMAND: /wa_off - Disable WhatsApp
+        // ==========================================
+        bot.onText(/\/wa_off/, async (msg) => {
+            const chatId = msg.chat.id;
+            const isAdmin = msg.from.id.toString() === adminId;
+            
+            if (!isAdmin) {
+                bot.sendMessage(chatId, '❌ Hanya admin yang dapat mematikan WhatsApp.');
+                return;
+            }
+            
+            whatsappState.disable('telegram');
+            bot.sendMessage(chatId, 
+                `❌ *WhatsApp Dimatikan*\n━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+                `Notifikasi WhatsApp sekarang NON-AKTIF.\n` +
+                `Tidak ada pesan yang akan dikirim ke pelanggan.\n\n` +
+                `💡 Gunakan /wa_on untuk mengaktifkan kembali.`,
+                { parse_mode: 'Markdown' }
+            );
+        });
+
+        // ==========================================
+        // COMMAND: /wa_status - Check WhatsApp status
+        // ==========================================
+        bot.onText(/\/wa_status/, async (msg) => {
+            const chatId = msg.chat.id;
+            const state = whatsappState.getState();
+            
+            bot.sendMessage(chatId, 
+                `📱 *Status WhatsApp*\n━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+                `Status: ${whatsappState.getStatusString()}\n` +
+                `Last Updated: ${state.last_updated}\n` +
+                `Updated By: ${state.updated_by}\n\n` +
+                `💡 Gunakan /wa_on atau /wa_off untuk mengubah status.`,
+                { parse_mode: 'Markdown' }
+            );
+        });
+
+        // ==========================================
+        // COMMAND: /hapus_bayar - Delete payment
+        // ==========================================
+        bot.onText(/\/hapus_bayar$/, async (msg) => {
+            const chatId = msg.chat.id;
+            bot.sendMessage(chatId, 
+                `🗑️ *Hapus Pembayaran*\n━━━━━━━━━━━━━━━━━━━━━━\n\n` +
+                `Format: /hapus_bayar <username> [bulan-tahun]\n\n` +
+                `Contoh:\n` +
+                `/hapus_bayar RYUJIE\n` +
+                `/hapus_bayar RYUJIE 2026-02\n\n` +
+                `⚠️ Jika bulan-tahun tidak disertakan, akan menghapus pembayaran terakhir.\n` +
+                `Gunakan /cancel untuk membatalkan.`,
+                { parse_mode: 'Markdown' }
+            );
+        });
+        bot.onText(/\/hapus_bayar (.+)/, async (msg, match) => {
+            const chatId = msg.chat.id;
+            const isAdmin = msg.from.id.toString() === adminId;
+            
+            if (!isAdmin) {
+                bot.sendMessage(chatId, '❌ Hanya admin yang dapat menghapus pembayaran.');
+                return;
+            }
+            
+            const input = match[1].trim();
+            const parts = input.split(/\s+/);
+            
+            if (parts.length < 1) {
+                bot.sendMessage(chatId, 
+                    `❌ Format salah.\n\n` +
+                    `Gunakan: /hapus_bayar <username> [bulan-tahun]\n` +
+                    `Contoh: /hapus_bayar RYUJIE`
+                );
+                return;
+            }
+            
+            const username = parts[0];
+            const monthYear = parts.length > 1 ? parts[1] : null;
+            
+            try {
+                // Get user info first
+                const user = await db.getUserByUsername(username);
+                if (!user) {
+                    bot.sendMessage(chatId, `❌ User "${username}" tidak ditemukan.`);
+                    return;
+                }
+                
+                // Show confirmation
+                const targetMonth = monthYear || user.last_paid_month;
+                if (!targetMonth) {
+                    bot.sendMessage(chatId, `❌ Tidak ada pembayaran yang ditemukan untuk ${username}.`);
+                    return;
+                }
+                
+                const keyboard = {
+                    reply_markup: {
+                        inline_keyboard: [
+                            [{ text: '✅ Ya, Hapus', callback_data: `confirm_delete_payment:${username}:${targetMonth}` }],
+                            [{ text: '❌ Batal', callback_data: 'cancel_delete_payment' }]
+                        ]
+                    }
+                };
+                
+                bot.sendMessage(chatId,
+                    `⚠️ *Konfirmasi Hapus Pembayaran*\n\n` +
+                    `User: ${username}\n` +
+                    `Bulan: ${targetMonth}\n\n` +
+                    `⚠️ Tindakan ini tidak dapat dibatalkan!\n\n` +
+                    `Apakah Anda yakin ingin menghapus pembayaran ini?`,
+                    { parse_mode: 'Markdown', ...keyboard }
+                );
+            } catch (error) {
+                console.error('Delete payment error:', error);
+                bot.sendMessage(chatId, `❌ Error: ${error.message}`);
+            }
+        });
+
+        // ==========================================
         // HELPER FUNCTIONS
         // ==========================================
         
@@ -1273,12 +1573,9 @@ bot.onText(/\/bayar (.+)/, async (msg, match) => {
                     totalUnpaid += feeTotal;
                     
                     message += `💰 ${formatRupiah(feeAmount)} (${users.length} user):\n`;
-                    users.slice(0, 10).forEach(username => {
+                    users.forEach(username => {
                         message += `  • ${username}\n`;
                     });
-                    if (users.length > 10) {
-                        message += `    ... dan ${users.length - 10} lainnya\n`;
-                    }
                     message += `  Total: ${formatRupiah(feeTotal)}\n\n`;
                 });
                 
@@ -1287,6 +1584,52 @@ bot.onText(/\/bayar (.+)/, async (msg, match) => {
                 bot.sendMessage(chatId, message);
             } catch (error) {
                 console.error('Tagihan error:', error);
+                bot.sendMessage(chatId, `❌ Error: ${error.message}`);
+            }
+        }
+        
+        async function handleSudahBayarCommand(chatId) {
+            try {
+                const allUsers = await db.getAllUsers();
+                const currentMonthYear = new Date().toISOString().slice(0, 7);
+                
+                const paidUsers = allUsers.filter(user => {
+                    return user.last_paid_month === currentMonthYear;
+                });
+                
+                if (paidUsers.length === 0) {
+                    bot.sendMessage(chatId, `❌ Belum ada user yang membayar bulan ini (${currentMonthYear}).`);
+                    return;
+                }
+                
+                let message = `✅ Sudah Bayar (${currentMonthYear}):\n\n`;
+                
+                const feeGroups = {};
+                paidUsers.forEach(user => {
+                    const fee = user.monthly_fee || 0;
+                    if (!feeGroups[fee]) feeGroups[fee] = [];
+                    feeGroups[fee].push(user.pppoe_username);
+                });
+                
+                let totalPaid = 0;
+                Object.keys(feeGroups).sort((a, b) => b - a).forEach(fee => {
+                    const users = feeGroups[fee];
+                    const feeAmount = parseInt(fee);
+                    const feeTotal = feeAmount * users.length;
+                    totalPaid += feeTotal;
+                    
+                    message += `💰 ${formatRupiah(feeAmount)} (${users.length} user):\n`;
+                    users.forEach(username => {
+                        message += `  • ${username}\n`;
+                    });
+                    message += `  Total: ${formatRupiah(feeTotal)}\n\n`;
+                });
+                
+                message += `📊 Ringkasan:\n• Total User: ${paidUsers.length}\n• Total Terbayar: ${formatRupiah(totalPaid)}\n• Rata-rata/user: ${formatRupiah(Math.round(totalPaid / paidUsers.length))}`;
+                
+                bot.sendMessage(chatId, message);
+            } catch (error) {
+                console.error('Sudah bayar error:', error);
                 bot.sendMessage(chatId, `❌ Error: ${error.message}`);
             }
         }
@@ -1299,14 +1642,17 @@ bot.onText(/\/bayar (.+)/, async (msg, match) => {
 }
 
 // Auto-initialize bot if token and admin ID are available in config
+// Use setTimeout to make it non-blocking
 if (config.telegram_token && config.telegram_admin_id) {
     console.log('Found Telegram token in config, initializing enhanced bot...');
-    const success = initializeBot(config.telegram_token, config.telegram_admin_id);
-    if (success) {
-        console.log('Telegram enhanced bot auto-initialized successfully');
-    } else {
-        console.log('Failed to auto-initialize Telegram enhanced bot');
-    }
+    setTimeout(() => {
+        const success = initializeBot(config.telegram_token, config.telegram_admin_id);
+        if (success) {
+            console.log('Telegram enhanced bot auto-initialized successfully');
+        } else {
+            console.log('Failed to auto-initialize Telegram enhanced bot');
+        }
+    }, 1000); // Delay by 1 second to allow server to start
 } else {
     console.log('Telegram token or admin ID not found in config. Enhanced bot will not start automatically.');
 }
@@ -1359,12 +1705,13 @@ router.get('/status', (req, res) => {
             '/keuangan - Cek laporan pendapatan & profit',
             '/tagihan - List client yang belum bayar',
             '/bayar - Input pembayaran (Auto-Search)',
+            '/sudahbayar - List client yang sudah bayar',
+            '/belumbayar - List client yang belum bayar',
             '/import_clients - Import data massal',
             '/set_harga - Koreksi harga bulanan client',
             '/catat_keluar - Catat pengeluaran operasional',
             '/status - Status dashboard',
-            '/userinfo - Informasi user',
-            '/belumbayar - Check unpaid users'
+            '/userinfo - Informasi user'
         ],
         state_management: {
             payment_states: Object.keys(userPaymentStates).length,

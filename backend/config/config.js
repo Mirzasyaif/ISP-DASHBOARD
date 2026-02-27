@@ -47,6 +47,12 @@ function loadConfig() {
             // Logging
             log_level: process.env.LOG_LEVEL || 'info',
             
+            // GenieACS Configuration
+            genieacs_url: process.env.GENIEACS_URL || 'http://localhost',
+            genieacs_port: parseInt(process.env.GENIEACS_PORT) || 7557,
+            genieacs_username: process.env.GENIEACS_USERNAME || 'admin',
+            genieacs_password: process.env.GENIEACS_PASSWORD || 'admin',
+            
             // Setup status
             setup_completed: process.env.SETUP_COMPLETED === 'true' || true
         };

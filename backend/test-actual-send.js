@@ -1,5 +1,5 @@
 // Test actual WhatsApp sending
-const { sendBillingNotification } = require('./controllers/whatsappController');
+const { sendBillingNotification } = require('./controllers/whatsappGowaController');
 
 // Test user data (using your number for testing)
 const testUser = {

@@ -90,9 +90,48 @@ function ensureSchema() {
     db.exec("ALTER TABLE clients ADD COLUMN payment_status TEXT DEFAULT 'pending'").catch(() => {});
     // Attempt to add last_paid_month column; ignore error if it already exists
     db.exec("ALTER TABLE clients ADD COLUMN last_paid_month TEXT").catch(() => {});
-    // Ensure payments table has paid_at and payment_method columns
+    // Ensure payments table has paid_at, payment_method, and invoice_number columns
     db.exec("ALTER TABLE payments ADD COLUMN paid_at TEXT").catch(() => {});
     db.exec("ALTER TABLE payments ADD COLUMN payment_method TEXT").catch(() => {});
+    db.exec("ALTER TABLE payments ADD COLUMN invoice_number TEXT").catch(() => {});
+    // Create payment_transactions table if not exists
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS payment_transactions (
+            id TEXT PRIMARY KEY,
+            order_id TEXT UNIQUE NOT NULL,
+            user_id TEXT NOT NULL,
+            month_year TEXT NOT NULL,
+            amount INTEGER NOT NULL,
+            payment_method TEXT,
+            status TEXT DEFAULT 'pending',
+            snap_token TEXT,
+            created_at TEXT,
+            updated_at TEXT,
+            FOREIGN KEY (user_id) REFERENCES clients(id)
+        )
+    `).catch(() => {});
+    // Create payment_proofs table if not exists
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS payment_proofs (
+            id TEXT PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            phone_number TEXT,
+            image_path TEXT,
+            ocr_result TEXT,
+            validation TEXT,
+            status TEXT DEFAULT 'pending_approval',
+            message_id TEXT,
+            approved_by TEXT,
+            amount INTEGER,
+            month_year TEXT,
+            created_at TEXT,
+            updated_at TEXT,
+            FOREIGN KEY (user_id) REFERENCES clients(id)
+        )
+    `).catch(() => {});
+    // Add amount and month_year columns if they don't exist
+    db.exec("ALTER TABLE payment_proofs ADD COLUMN amount INTEGER").catch(() => {});
+    db.exec("ALTER TABLE payment_proofs ADD COLUMN month_year TEXT").catch(() => {});
 }
 
 function closeDB() {
@@ -103,7 +142,7 @@ function closeDB() {
 }
 
 /* ---------- Client Operations ---------- */
-function getAllClients() {
+async function getAllClients() {
     // Check if database is initialized
     if (!db) {
         console.error('❌ Database not initialized in getAllClients');
@@ -135,17 +174,37 @@ function getAllClients() {
         FROM clients c
         ORDER BY c.name
     `;
-    return db.prepare(query).all([currentMonthYear, currentMonthYear]);
+    return await db.prepare(query).all([currentMonthYear, currentMonthYear]);
 }
 
-function getClientByUsername(username) {
-    const query = 'SELECT * FROM clients WHERE pppoe_username = ?';
-    return db.prepare(query).get([username]);
+async function getClientByUsername(username) {
+    // Search by pppoe_username first (exact match)
+    const query = 'SELECT * FROM clients WHERE LOWER(pppoe_username) = LOWER(?)';
+    let result = await db.prepare(query).get([username]);
+    
+    // If not found, search by name (case-insensitive)
+    if (!result) {
+        const nameQuery = 'SELECT * FROM clients WHERE LOWER(name) = LOWER(?)';
+        result = await db.prepare(nameQuery).get([username]);
+    }
+    
+    return result;
 }
 
-function getClientById(id) {
+async function getClientById(id) {
     const query = 'SELECT * FROM clients WHERE id = ?';
-    return db.prepare(query).get([id]);
+    return await db.prepare(query).get([id]);
+}
+
+/**
+ * Helper function to get the 28th day of the current month in YYYY-MM-DD format
+ * @returns {string} Date string for the 28th of current month
+ */
+function getDueDate28th() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    return `${year}-${month}-28`;
 }
 
 function addClient(clientData) {
@@ -157,21 +216,30 @@ function addClient(clientData) {
         plan,
         ip_address,
         monthly_fee = 0,
-        status = 'active'
+        status = 'active',
+        cpe_serial_number,
+        cpe_model,
+        wifi_ssid,
+        wifi_password,
+        due_date
     } = clientData;
 
     const id = Date.now().toString();
     const created_at = new Date().toISOString();
+    // Default due date to 28th of current month if not provided
+    const clientDueDate = due_date || getDueDate28th();
 
     const query = `
         INSERT INTO clients (
             id, name, pppoe_username, full_name, address, phone,
-            plan, ip_address, monthly_fee, status, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            plan, ip_address, monthly_fee, status, created_at, due_date,
+            cpe_serial_number, cpe_model, wifi_ssid, wifi_password
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `;
     const stmt = db.prepare(query);
     stmt.run([id, pppoe_username, pppoe_username, full_name || null, address || null, phone || null,
-        plan, ip_address || null, monthly_fee, status, created_at]);
+        plan, ip_address || null, monthly_fee, status, created_at, clientDueDate,
+        cpe_serial_number || null, cpe_model || null, wifi_ssid || null, wifi_password || null]);
 
     return {
         id,
@@ -183,7 +251,12 @@ function addClient(clientData) {
         ip_address,
         monthly_fee,
         status,
-        created_at
+        created_at,
+        due_date: clientDueDate,
+        cpe_serial_number,
+        cpe_model,
+        wifi_ssid,
+        wifi_password
     };
 }
 
@@ -198,20 +271,25 @@ async function updatePayment(username) {
         WHERE user_id = ? AND month_year = ?
     `).get([client.id, monthYear]);
 
+    // Generate invoice number
+    const [year, month] = monthYear.split('-');
+    const randomNum = Math.floor(1000 + Math.random() * 9000);
+    const invoiceNumber = `INV-${year}${month}-${randomNum}`;
+
     if (existing) {
         const upd = db.prepare(`
             UPDATE payments 
-            SET status = 'paid', paid_at = ?, payment_method = 'telegram'
+            SET status = 'paid', paid_at = ?, payment_method = 'telegram', invoice_number = ?
             WHERE id = ?
         `);
-        await upd.run([new Date().toISOString(), existing.id]);
+        await upd.run([new Date().toISOString(), invoiceNumber, existing.id]);
     } else {
         const ins = db.prepare(`
-            INSERT INTO payments (id, user_id, month_year, amount, status, paid_at, payment_method)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO payments (id, user_id, month_year, amount, status, paid_at, payment_method, invoice_number)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `);
         await ins.run([Date.now().toString(), client.id, monthYear, client.monthly_fee || 0, 'paid',
-            new Date().toISOString(), 'telegram']);
+            new Date().toISOString(), 'telegram', invoiceNumber]);
 
         const tx = db.prepare(`
             INSERT INTO transactions (id, date, type, amount, category, description)
@@ -229,7 +307,7 @@ async function updatePayment(username) {
     `);
     await updClient.run([monthYear, client.id]);
 
-    return true;
+    return { success: true, invoiceNumber };
 }
 
 // New helper to fetch payment records for a specific user
@@ -240,6 +318,93 @@ async function getPaymentsByUserId(userId) {
         ORDER BY month_year DESC
     `).all([userId]);
     return rows;
+}
+
+// Payment transactions helpers
+async function getPaymentTransactionByOrderId(orderId) {
+    const query = 'SELECT * FROM payment_transactions WHERE order_id = ?';
+    return await db.prepare(query).get([orderId]);
+}
+
+async function createPaymentTransaction(transactionData) {
+    const { id, order_id, user_id, month_year, amount, payment_method, status, snap_token, created_at } = transactionData;
+    const query = `
+        INSERT INTO payment_transactions (id, order_id, user_id, month_year, amount, payment_method, status, snap_token, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    await db.prepare(query).run([id, order_id, user_id, month_year, amount, payment_method, status, snap_token, created_at]);
+    return true;
+}
+
+async function updatePaymentTransactionStatus(orderId, status, updated_at) {
+    const query = 'UPDATE payment_transactions SET status = ?, updated_at = ? WHERE order_id = ?';
+    await db.prepare(query).run([status, updated_at, orderId]);
+    return true;
+}
+
+async function updatePaymentStatus(id, status, paid_at, payment_method) {
+    const query = 'UPDATE payments SET status = ?, paid_at = ?, payment_method = ? WHERE id = ?';
+    await db.prepare(query).run([status, paid_at, payment_method, id]);
+    return true;
+}
+
+async function createPaymentRecord(paymentData) {
+    const { id, user_id, month_year, amount, status, paid_at, payment_method } = paymentData;
+    const query = `
+        INSERT INTO payments (id, user_id, month_year, amount, status, paid_at, payment_method)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    `;
+    await db.prepare(query).run([id, user_id, month_year, amount, status, paid_at, payment_method]);
+    return true;
+}
+
+async function getPaymentByUserAndMonth(userId, monthYear) {
+    const query = 'SELECT * FROM payments WHERE user_id = ? AND month_year = ?';
+    return await db.prepare(query).get([userId, monthYear]);
+}
+
+async function updateClientPaymentStatus(userId, lastPaidMonth, paymentStatus) {
+    const query = 'UPDATE clients SET last_paid_month = ?, payment_status = ? WHERE id = ?';
+    await db.prepare(query).run([lastPaidMonth, paymentStatus, userId]);
+    return true;
+}
+
+// Payment proof operations
+async function createPaymentProof(proofData) {
+    const { id, user_id, username, month_year, amount, payment_method, proof_image, proof_path, status, created_at } = proofData;
+    const query = `
+        INSERT INTO payment_proofs (id, user_id, username, month_year, amount, payment_method, proof_image, proof_path, status, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    await db.prepare(query).run([id, user_id, username, month_year, amount, payment_method, proof_image, proof_path, status, created_at]);
+    return true;
+}
+
+async function getPaymentProofsByStatus(status) {
+    const query = `
+        SELECT pp.*, c.full_name, c.phone_number 
+        FROM payment_proofs pp
+        LEFT JOIN clients c ON pp.user_id = c.id
+        WHERE pp.status = ?
+        ORDER BY pp.created_at DESC
+    `;
+    return await db.prepare(query).all([status]);
+}
+
+async function getPaymentProofById(id) {
+    const query = `
+        SELECT pp.*, c.full_name, c.phone_number 
+        FROM payment_proofs pp
+        LEFT JOIN clients c ON pp.user_id = c.id
+        WHERE pp.id = ?
+    `;
+    return await db.prepare(query).get([id]);
+}
+
+async function updatePaymentProofStatus(id, status, approvedBy) {
+    const query = 'UPDATE payment_proofs SET status = ?, approved_by = ?, updated_at = ? WHERE id = ?';
+    await db.prepare(query).run([status, approvedBy, new Date().toISOString(), id]);
+    return true;
 }
 
 /* ---------- Config Operations ---------- */
@@ -282,7 +447,7 @@ async function updateConfig(newConfig) {
 }
 
 /* ---------- Miscellaneous Helpers ---------- */
-function getUserByNameOrIP(searchTerm) {
+async function getUserByNameOrIP(searchTerm) {
     const pattern = `%${searchTerm}%`;
     const query = `
         SELECT * FROM clients 
@@ -291,10 +456,10 @@ function getUserByNameOrIP(searchTerm) {
            OR ip_address LIKE ?
         LIMIT 1
     `;
-    return db.prepare(query).get([pattern, pattern, pattern]);
+    return await db.prepare(query).get([pattern, pattern, pattern]);
 }
 
-function searchUsersByNameOrIP(searchTerm) {
+async function searchUsersByNameOrIP(searchTerm) {
     const pattern = `%${searchTerm}%`;
     const query = `
         SELECT * FROM clients 
@@ -304,28 +469,34 @@ function searchUsersByNameOrIP(searchTerm) {
         ORDER BY pppoe_username
         LIMIT 20
     `;
-    return db.prepare(query).all([pattern, pattern, pattern]);
+    return await db.prepare(query).all([pattern, pattern, pattern]);
 }
 
-function updateUserMonthlyFee(username, newFee) {
+async function updateUserMonthlyFee(username, newFee) {
     const stmt = db.prepare('UPDATE clients SET monthly_fee = ? WHERE pppoe_username = ?');
-    const res = stmt.run([newFee, username]);
+    const res = await stmt.run([newFee, username]);
     return res.changes > 0;
 }
 
-function updateUserPhoneNumber(userId, phoneNumber) {
+async function updateUserPhoneNumber(userId, phoneNumber) {
     const stmt = db.prepare('UPDATE clients SET phone_number = ?, phone = ? WHERE id = ?');
-    const res = stmt.run([phoneNumber, phoneNumber, userId]);
+    const res = await stmt.run([phoneNumber, phoneNumber, userId]);
     return res.changes > 0;
 }
 
-function updateUserDueDate(userId, dueDate) {
+async function updateClientGenieACSStatus(userId, deviceId, status) {
+    const stmt = db.prepare('UPDATE clients SET genieacs_device_id = ?, genieacs_status = ? WHERE id = ?');
+    const res = await stmt.run([deviceId, status, userId]);
+    return res.changes > 0;
+}
+
+async function updateUserDueDate(userId, dueDate) {
     const stmt = db.prepare('UPDATE clients SET due_date = ? WHERE id = ?');
-    const res = stmt.run([dueDate, userId]);
+    const res = await stmt.run([dueDate, userId]);
     return res.changes > 0;
 }
 
-function getUsersForDueDate(dueDate) {
+async function getUsersForDueDate(dueDate) {
     const currentMonthYear = new Date().toISOString().slice(0, 7);
     const query = `
         SELECT c.* 
@@ -339,24 +510,24 @@ function getUsersForDueDate(dueDate) {
                 AND p.status = 'paid'
           )
     `;
-    return db.prepare(query).all([dueDate, currentMonthYear]);
+    return await db.prepare(query).all([dueDate, currentMonthYear]);
 }
 
 /* ---------- User Operations (alias for compatibility) ---------- */
-function getAllUsers() {
-    return getAllClients();
+async function getAllUsers() {
+    return await getAllClients();
 }
 
-function getUserByUsername(username) {
-    return getClientByUsername(username);
+async function getUserByUsername(username) {
+    return await getClientByUsername(username);
 }
 
-function getUserById(id) {
-    return getClientById(id);
+async function getUserById(id) {
+    return await getClientById(id);
 }
 
-function addUser(userData) {
-    return addClient(userData);
+async function addUser(userData) {
+    return await addClient(userData);
 }
 
 /* ---------- Export ---------- */
@@ -378,6 +549,7 @@ module.exports = {
     searchUsersByNameOrIP,
     updateUserMonthlyFee,
     updateUserPhoneNumber,
+    updateClientGenieACSStatus,
     updateUserDueDate,
     getUsersForDueDate,
     // New: Statistics endpoint for /api/stats
@@ -433,6 +605,19 @@ module.exports = {
     },
     // Export new helper to fetch payment records for a specific user
     getPaymentsByUserId,
+    // Payment transactions helpers
+    getPaymentTransactionByOrderId,
+    createPaymentTransaction,
+    updatePaymentTransactionStatus,
+    updatePaymentStatus,
+    createPaymentRecord,
+    getPaymentByUserAndMonth,
+    updateClientPaymentStatus,
+    // Payment proof operations
+    createPaymentProof,
+    getPaymentProofsByStatus,
+    getPaymentProofById,
+    updatePaymentProofStatus,
     
     // Financial summary function
     getFinancialSummary: async function() {
@@ -575,6 +760,87 @@ module.exports = {
         } catch (error) {
             console.error('Error adding operational expense:', error);
             return false;
+        }
+    },
+    
+    // Delete payment function
+    deletePayment: async function(username, monthYear) {
+        try {
+            // Check if database is initialized
+            if (!db) {
+                console.error('❌ Database not initialized in deletePayment');
+                await initDB();
+            }
+            
+            // Get the client
+            const client = await getClientByUsername(username);
+            if (!client) {
+                console.error(`❌ Client ${username} not found`);
+                return { success: false, message: 'Client not found' };
+            }
+            
+            // If monthYear is not provided, use the last paid month
+            if (!monthYear) {
+                monthYear = client.last_paid_month;
+            }
+            
+            if (!monthYear) {
+                return { success: false, message: 'No payment found to delete' };
+            }
+            
+            // Get the payment record before deleting
+            const payment = await db.prepare(`
+                SELECT * FROM payments 
+                WHERE user_id = ? AND month_year = ?
+            `).get([client.id, monthYear]);
+            
+            if (!payment) {
+                return { success: false, message: 'Payment record not found' };
+            }
+            
+            // Delete the payment record
+            const deleteResult = await db.prepare(`
+                DELETE FROM payments 
+                WHERE user_id = ? AND month_year = ?
+            `).run([client.id, monthYear]);
+            
+            if (deleteResult.changes === 0) {
+                return { success: false, message: 'Failed to delete payment' };
+            }
+            
+            // Update client's last_paid_month and payment_status
+            // Find the most recent payment for this user
+            const recentPayment = await db.prepare(`
+                SELECT month_year FROM payments 
+                WHERE user_id = ? 
+                ORDER BY month_year DESC 
+                LIMIT 1
+            `).get([client.id]);
+            
+            if (recentPayment) {
+                // Update to the most recent payment
+                await db.prepare(`
+                    UPDATE clients 
+                    SET last_paid_month = ?, payment_status = 'paid' 
+                    WHERE id = ?
+                `).run([recentPayment.month_year, client.id]);
+            } else {
+                // No more payments, reset to pending
+                await db.prepare(`
+                    UPDATE clients 
+                    SET last_paid_month = NULL, payment_status = 'pending' 
+                    WHERE id = ?
+                `).run([client.id]);
+            }
+            
+            return { 
+                success: true, 
+                message: `Payment for ${username} (${monthYear}) deleted successfully`,
+                deletedPayment: payment
+            };
+        } catch (error) {
+            console.error('Error deleting payment:', error);
+            return { success: false, message: error.message };
         }
     }
 };

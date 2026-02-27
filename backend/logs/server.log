@@ -1,0 +1,16 @@
+✅ Using SQLite database
+Loaded config from environment variables
+TELEGRAM_TOKEN: Set
+TELEGRAM_ADMIN_ID: 468868143
+Found old config in db.json - consider migrating to environment variables
+Found Telegram token in config, initializing enhanced bot...
+Telegram Bot initialized with admin ID: 468868143
+Telegram enhanced bot auto-initialized successfully
+[32minfo[39m: ISP Dashboard running on http://0.0.0.0:3001 {"service":"isp-dashboard","timestamp":"2026-02-19 00:05:44"}
+[32minfo[39m: Accessible from network at: http://192.168.2.203:3001 {"service":"isp-dashboard","timestamp":"2026-02-19 00:05:44"}
+[32minfo[39m: Health check available at: http://0.0.0.0:3001/health {"service":"isp-dashboard","timestamp":"2026-02-19 00:05:44"}
+✅ SQLite database initialized. Found 9 tables.
+✅ Database initialized successfully
+✅ Cron Scheduler started: Daily check at 08:00 AM (Asia/Jakarta).
+✅ Billing scheduler started
+✅ Command menu registered successfully

@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const db = require('./models/db');
+const db = require('./models/db-sqlite');
 const { sanitizeInput, preventSQLInjection, preventXSS } = require('./middleware/validation');
 const { authenticateAPI } = require('./middleware/auth');
 const { requestLogger, errorLogger, logger } = require('./middleware/logging');
@@ -21,9 +21,11 @@ db.initDB().then(() => {
         console.log('✅ Billing scheduler started');
     } catch (error) {
         console.error('❌ Failed to start billing scheduler:', error.message);
+        console.error('Scheduler error details:', error.stack);
     }
 }).catch((error) => {
     console.error('❌ Failed to initialize database:', error.message);
+    console.error('Database error details:', error.stack);
     process.exit(1);
 });
 
@@ -83,6 +85,10 @@ app.use((req, res, next) => {
 app.use(express.static(path.join(__dirname, '../frontend')));
 
 // API Routes
+// Payment check routes (simple check by PPPoE name) - PUBLIC, no license required
+app.use('/api/payment-check', require('./routes/payment-check'));
+// User status routes (for OpenClaw integration) - PUBLIC, no license required
+app.use('/api/user-status', require('./routes/user-status'));
 app.use('/api', require('./routes/api'));
 app.use('/api/mikrotik', require('./routes/mikrotik'));
 // Use enhanced Telegram bot with smart price handling
@@ -93,6 +99,10 @@ app.use('/api/license', require('./routes/license'));
 app.use('/api/financial', require('./routes/financial'));
 // WhatsApp controller routes
 app.use('/api/whatsapp', require('./routes/whatsapp'));
+// Payment gateway routes
+app.use('/api/payment', require('./routes/payment'));
+// OpenClaw webhook routes
+app.use('/api/openclaw', require('./routes/openclaw'));
 // Settings routes (data management & sync)
 app.use('/api/settings', require('./routes/settings'));
 // Monitoring routes - Comment out karena path beda
@@ -159,16 +169,16 @@ app.use(async (req, res, next) => {
             return res.redirect('/setup.html');
         }
         
-        // Check if license activation is required (commercial version)
-        try {
-            const activationRequired = await requiresActivation();
-            if (activationRequired && !req.path.includes('/license') && req.path !== '/' && !req.path.startsWith('/api/license')) {
-                return res.redirect('/license.html');
-            }
-        } catch (error) {
-            console.error('License check error:', error);
-            // Continue if license check fails
-        }
+        // License activation check disabled - license.html removed
+        // try {
+        //     const activationRequired = await requiresActivation();
+        //     if (activationRequired && !req.path.includes('/license') && req.path !== '/' && !req.path.startsWith('/api/license')) {
+        //         return res.redirect('/license.html');
+        //     }
+        // } catch (error) {
+        //     console.error('License check error:', error);
+        //     // Continue if license check fails
+        // }
         
         next();
     } catch (error) {

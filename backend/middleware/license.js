@@ -167,7 +167,8 @@ function licenseMiddleware() {
       '/api/financial',
       '/api/stats',
       '/api/users',
-      '/api/pppoe'
+      '/api/pppoe',
+      '/api/openclaw'
     ];
 
     if (skipRoutes.some(route => req.path.startsWith(route))) {

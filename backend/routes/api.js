@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../models/db');
+const db = require('../models/db-sqlite');
 const config = require('../config/config');
 const { authenticateAPI } = require('../middleware/auth');
 const { validationRules, validate } = require('../middleware/validation');
+const genieacsService = require('../services/genieacsService');
 
 // Get dashboard stats (protected with API key)
 router.get('/stats', authenticateAPI, async (req, res) => {
@@ -102,13 +103,66 @@ async function fetchMikrotikSecrets() {
     }
 }
 
-// Add new user (with validation and API key)
+// Add new user (with validation and API key) - Updated for GenieACS integration
 router.post('/users', authenticateAPI, validationRules.createUser, validate, async (req, res) => {
-    const { pppoe_username, full_name, address, phone, plan } = req.body;
+    const { 
+        pppoe_username, 
+        full_name, 
+        address, 
+        phone, 
+        plan,
+        cpe_serial_number,
+        cpe_model,
+        wifi_ssid,
+        wifi_password,
+        ip_address,
+        monthly_fee
+    } = req.body;
+    
     try {
-        const user = await db.addUser({ pppoe_username, full_name, address, phone, plan });
-        res.json({ success: true, id: user.id });
+        // Tambah user ke database
+        const user = await db.addUser({ 
+            pppoe_username, 
+            full_name, 
+            address, 
+            phone, 
+            plan,
+            ip_address,
+            monthly_fee,
+            cpe_serial_number,
+            cpe_model,
+            wifi_ssid,
+            wifi_password
+        });
+        
+        // Jika ada data CPE, provision ke GenieACS
+        let genieacsResult = null;
+        if (cpe_serial_number) {
+            console.log('📡 Provisioning client to GenieACS...');
+            genieacsResult = await genieacsService.provisionClient({
+                pppoe_username,
+                pppoe_password: pppoe_username, // Default password sama dengan username
+                cpe_serial_number,
+                cpe_model,
+                wifi_ssid,
+                wifi_password
+            });
+            
+            // Update database dengan status GenieACS
+            if (genieacsResult.success) {
+                await db.updateClientGenieACSStatus(user.id, genieacsResult.deviceId, 'provisioned');
+            } else {
+                await db.updateClientGenieACSStatus(user.id, null, 'failed');
+            }
+        }
+        
+        res.json({ 
+            success: true, 
+            id: user.id,
+            genieacs: genieacsResult
+        });
     } catch (error) {
+        console.error('Error adding user:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -184,6 +238,129 @@ router.get('/dashboard', authenticateAPI, async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ error: error.message });
+    }
+});
+
+// GenieACS endpoints
+router.get('/genieacs/test', authenticateAPI, async (req, res) => {
+    try {
+        const result = await genieacsService.testConnection();
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+router.get('/genieacs/device/:serialNumber', authenticateAPI, async (req, res) => {
+    try {
+        const { serialNumber } = req.params;
+        const result = await genieacsService.getDeviceStatus(serialNumber);
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+router.post('/genieacs/provision', authenticateAPI, async (req, res) => {
+    try {
+        const clientData = req.body;
+        const result = await genieacsService.provisionClient(clientData);
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// OpenClaw Allowlist Management
+const ALLOWLIST_FILE = '/home/mirza/.openclaw/credentials/whatsapp-allowFrom.json';
+
+// Get current allowlist
+router.get('/openclaw/allowlist', authenticateAPI, async (req, res) => {
+    try {
+        const fs = require('fs');
+        
+        if (!fs.existsSync(ALLOWLIST_FILE)) {
+            return res.json({ version: 1, allowFrom: [] });
+        }
+        
+        const data = JSON.parse(fs.readFileSync(ALLOWLIST_FILE, 'utf8'));
+        res.json(data);
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Sync allowlist from database
+router.post('/openclaw/allowlist/sync', authenticateAPI, async (req, res) => {
+    try {
+        const fs = require('fs');
+        
+        // Get all clients with phone numbers
+        const clients = await db.getAllClients();
+        
+        // Extract unique phone numbers
+        const phoneNumbers = new Set();
+        const adminNumber = '+6285236022073'; // Admin number should always be included
+        
+        // Add admin number first
+        phoneNumbers.add(adminNumber);
+        
+        // Add all client phone numbers
+        clients.forEach(client => {
+            if (client.phone_number && client.phone_number.trim() !== '') {
+                // Format: ensure it starts with +
+                let formatted = client.phone_number.trim();
+                if (!formatted.startsWith('+')) {
+                    formatted = '+' + formatted;
+                }
+                phoneNumbers.add(formatted);
+            }
+        });
+        
+        // Convert to array and sort
+        const allowlist = Array.from(phoneNumbers).sort();
+        
+        // Write new allowlist
+        const newAllowlistData = {
+            version: 1,
+            allowFrom: allowlist
+        };
+        
+        fs.writeFileSync(ALLOWLIST_FILE, JSON.stringify(newAllowlistData, null, 2));
+        
+        res.json({ 
+            success: true, 
+            message: 'Allowlist synced successfully',
+            count: allowlist.length,
+            allowlist: allowlist
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// Restart OpenClaw services
+router.post('/openclaw/restart', authenticateAPI, async (req, res) => {
+    try {
+        const { exec } = require('child_process');
+        const util = require('util');
+        const execPromise = util.promisify(exec);
+        
+        // Kill existing OpenClaw processes
+        await execPromise('pkill -f openclaw');
+        
+        // Wait a moment
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Start OpenClaw gateway
+        await execPromise('openclaw gateway --port 18789 > /dev/null 2>&1 &');
+        
+        res.json({ 
+            success: true, 
+            message: 'OpenClaw services restarted successfully' 
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 

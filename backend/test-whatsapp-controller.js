@@ -1,5 +1,5 @@
 // Test WhatsApp controller implementation
-const { sendBillingNotification, getUserPhone } = require('./controllers/whatsappController');
+const { sendBillingNotification, getUserPhone } = require('./controllers/whatsappGowaController');
 
 // Test data
 const testUsers = [

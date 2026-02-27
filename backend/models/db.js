@@ -243,6 +243,94 @@ async function getTopClients(limit = 10) {
     }
 }
 
+// Payment-related functions (for payment gateway)
+async function getClientByUsername(username) {
+    return dbModule.getClientByUsername ? dbModule.getClientByUsername(username) : null;
+}
+
+async function getClientById(id) {
+    return dbModule.getClientById ? dbModule.getClientById(id) : null;
+}
+
+async function getPaymentsByUserId(userId) {
+    if (dbModule.getPaymentsByUserId) {
+        return dbModule.getPaymentsByUserId(userId);
+    } else {
+        return []; // Empty array for JSON database
+    }
+}
+
+async function getPaymentByUserAndMonth(userId, monthYear) {
+    if (dbModule.getPaymentByUserAndMonth) {
+        return dbModule.getPaymentByUserAndMonth(userId, monthYear);
+    } else {
+        return null;
+    }
+}
+
+async function createPaymentTransaction(transactionData) {
+    if (dbModule.createPaymentTransaction) {
+        return dbModule.createPaymentTransaction(transactionData);
+    } else {
+        console.warn('createPaymentTransaction not supported in current database');
+        return false;
+    }
+}
+
+async function updatePaymentTransactionStatus(orderId, status, updatedAt) {
+    if (dbModule.updatePaymentTransactionStatus) {
+        return dbModule.updatePaymentTransactionStatus(orderId, status, updatedAt);
+    } else {
+        console.warn('updatePaymentTransactionStatus not supported in current database');
+        return false;
+    }
+}
+
+async function getPaymentTransactionByOrderId(orderId) {
+    if (dbModule.getPaymentTransactionByOrderId) {
+        return dbModule.getPaymentTransactionByOrderId(orderId);
+    } else {
+        return null;
+    }
+}
+
+async function updatePaymentStatus(id, status, paidAt, paymentMethod) {
+    if (dbModule.updatePaymentStatus) {
+        return dbModule.updatePaymentStatus(id, status, paidAt, paymentMethod);
+    } else {
+        console.warn('updatePaymentStatus not supported in current database');
+        return false;
+    }
+}
+
+async function createPaymentRecord(paymentData) {
+    if (dbModule.createPaymentRecord) {
+        return dbModule.createPaymentRecord(paymentData);
+    } else {
+        console.warn('createPaymentRecord not supported in current database');
+        return false;
+    }
+}
+
+async function updateClientPaymentStatus(userId, lastPaidMonth, paymentStatus) {
+    if (dbModule.updateClientPaymentStatus) {
+        return dbModule.updateClientPaymentStatus(userId, lastPaidMonth, paymentStatus);
+    } else {
+        console.warn('updateClientPaymentStatus not supported in current database');
+        return false;
+    }
+}
+
+// Delete payment function
+async function deletePayment(username, monthYear) {
+    if (dbModule.deletePayment) {
+        return dbModule.deletePayment(username, monthYear);
+    } else {
+        console.warn('deletePayment not supported in current database');
+        return { success: false, message: 'Delete payment not supported in current database' };
+    }
+}
+
 // Export
 module.exports = {
     initDB,
@@ -274,5 +362,17 @@ module.exports = {
     // Expose which database is being used
     getDatabaseType: () => useSQLite ? 'sqlite' : 'json',
     // WhatsApp-related functions
-    updateUserPhoneNumber
+    updateUserPhoneNumber,
+    // Payment gateway functions
+    getClientByUsername,
+    getClientById,
+    getPaymentsByUserId,
+    getPaymentByUserAndMonth,
+    createPaymentTransaction,
+    updatePaymentTransactionStatus,
+    getPaymentTransactionByOrderId,
+    updatePaymentStatus,
+    createPaymentRecord,
+    updateClientPaymentStatus,
+    deletePayment
 };

@@ -953,3 +953,4 @@ window.importFromMikrotik = importFromMikrotik;
 window.markPaid = markPaid;
 window.disconnectUser = disconnectUser;
 window.searchUsers = searchUsers;
+window.changePage = changePage;
