@@ -40,13 +40,16 @@ jobs:
     - name: Grant execute permission for gradlew
       run: chmod +x android/gradlew
       
+    - name: Clear Gradle cache
+      run: rm -rf ~/.gradle/caches/
+      
     - name: Sync Capacitor
       run: npx cap sync android
       
     - name: Build Debug APK
       run: |
         cd android
-        ./gradlew assembleDebug --stacktrace
+        ./gradlew assembleDebug --stacktrace --no-daemon
         
     - name: Upload Debug APK
       uses: actions/upload-artifact@v4
@@ -62,7 +65,7 @@ jobs:
         if [ -n "$KEYSTORE_BASE64" ]; then
           echo "$KEYSTORE_BASE64" | base64 --decode > android/keystore.jks
           cd android
-          ./gradlew assembleRelease --stacktrace
+          ./gradlew assembleRelease --stacktrace --no-daemon
         else
           echo "Keystore secret not set, skipping release build"
         fi
