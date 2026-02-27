@@ -3,6 +3,10 @@ apply plugin: 'com.android.application'
 android {
     namespace "com.isp.dashboard"
     compileSdk rootProject.ext.compileSdkVersion
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
     defaultConfig {
         applicationId "com.isp.dashboard"
         minSdkVersion rootProject.ext.minSdkVersion
